@@ -17,22 +17,15 @@ parser.add_argument(
 )
 parser.add_argument("--max_iterations", type=int, default=None, help="RL Policy training iterations.")
 parser.add_argument(
-        "--algo",
+        "--algorihm",
         type=str,
         default="happo",
         choices=[
             "happo",
             "hatrpo",
-            "haa2c",
-            "haddpg",
-            "hatd3",
-            "hasac",
-            "had3qn",
-            "maddpg",
-            "matd3",
-            "mappo",
+            "haa2c"
         ],
-        help="Algorithm name. Choose from: happo, hatrpo, haa2c, haddpg, hatd3, hasac, had3qn, maddpg, matd3, mappo.",
+        help="Algorithm name. Choose from: happo, hatrpo, haa2c",
     )
 
 # append AppLauncher cli args
@@ -54,7 +47,7 @@ import gymnasium as gym
 import os
 import random
 from datetime import datetime
-from harl.runners import RUNNER_REGISTRY
+from harl.runners import ISSAC_LAB_RUNNER_REGISTRY
 
 from omni.isaac.lab.envs import (
     DirectMARLEnv,
@@ -78,7 +71,18 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
 
     agent_cfg["eval"]["use_eval"] = False
 
-    runner = RUNNER_REGISTRY[args_cli.algo](args_cli, agent_cfg, env_cfg)
+
+    # #convert configs to dicts
+    # args = vars(args_cli)
+    # env_cfg_dict = env_cfg.to_dict()
+    # env_cfg_dict['cfg_class'] = env_cfg
+
+    # #remap args dict to match the expected args
+    # args['env'] = args.pop('task')
+    # args['exp_name'] = args['env']
+
+    #create runner
+    runner = ISSAC_LAB_RUNNER_REGISTRY[args_cli.algorithm](agent_cfg, env)
     runner.run()
     runner.close()
 

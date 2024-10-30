@@ -1,0 +1,617 @@
+{
+    "algo_args":	{
+        "algo":	{
+            "action_aggregation":	"prod",
+            "actor_num_mini_batch":	1,
+            "clip_param":	0.2,
+            "critic_epoch":	5,
+            "critic_num_mini_batch":	1,
+            "entropy_coef":	0.01,
+            "fixed_order":	false,
+            "gae_lambda":	0.95,
+            "gamma":	0.99,
+            "huber_delta":	10.0,
+            "max_grad_norm":	10.0,
+            "ppo_epoch":	5,
+            "share_param":	false,
+            "use_clipped_value_loss":	true,
+            "use_gae":	true,
+            "use_huber_loss":	true,
+            "use_max_grad_norm":	true,
+            "use_policy_active_masks":	true,
+            "value_loss_coef":	1
+        },
+        "device":	{
+            "cuda":	true,
+            "cuda_deterministic":	true,
+            "torch_threads":	4
+        },
+        "eval":	{
+            "eval_episodes":	20,
+            "n_eval_rollout_threads":	10,
+            "use_eval":	false
+        },
+        "logger":	{
+            "log_dir":	"./results"
+        },
+        "model":	{
+            "activation_func":	"relu",
+            "critic_lr":	0.0005,
+            "data_chunk_length":	10,
+            "gain":	0.01,
+            "hidden_sizes":	[
+                128,
+                128
+            ],
+            "initialization_method":	"orthogonal_",
+            "lr":	0.0005,
+            "opti_eps":	1e-05,
+            "recurrent_n":	1,
+            "std_x_coef":	1,
+            "std_y_coef":	0.5,
+            "use_feature_normalization":	true,
+            "use_naive_recurrent_policy":	false,
+            "use_recurrent_policy":	false,
+            "weight_decay":	0
+        },
+        "render":	{
+            "render_episodes":	10,
+            "use_render":	false
+        },
+        "seed":	{
+            "seed":	1,
+            "seed_specify":	true
+        },
+        "train":	{
+            "episode_length":	200,
+            "eval_interval":	25,
+            "log_interval":	5,
+            "model_dir":	null,
+            "n_rollout_threads":	20,
+            "num_env_steps":	10000000,
+            "use_linear_lr_decay":	false,
+            "use_proper_time_limits":	true,
+            "use_valuenorm":	true
+        }
+    },
+    "env_args":	{
+        "act_moving_average":	1.0,
+        "action_noise_model":	null,
+        "action_spaces":	{
+            "left_hand":	20,
+            "right_hand":	20
+        },
+        "actuated_joint_names":	[
+            "robot0_WRJ1",
+            "robot0_WRJ0",
+            "robot0_FFJ3",
+            "robot0_FFJ2",
+            "robot0_FFJ1",
+            "robot0_MFJ3",
+            "robot0_MFJ2",
+            "robot0_MFJ1",
+            "robot0_RFJ3",
+            "robot0_RFJ2",
+            "robot0_RFJ1",
+            "robot0_LFJ4",
+            "robot0_LFJ3",
+            "robot0_LFJ2",
+            "robot0_LFJ1",
+            "robot0_THJ4",
+            "robot0_THJ3",
+            "robot0_THJ2",
+            "robot0_THJ1",
+            "robot0_THJ0"
+        ],
+        "decimation":	2,
+        "dist_reward_scale":	20.0,
+        "episode_length_s":	7.5,
+        "events":	null,
+        "fall_dist":	0.24,
+        "fingertip_body_names":	[
+            "robot0_ffdistal",
+            "robot0_mfdistal",
+            "robot0_rfdistal",
+            "robot0_lfdistal",
+            "robot0_thdistal"
+        ],
+        "goal_object_cfg":	{
+            "markers":	{
+                "goal":	{
+                    "activate_contact_sensors":	false,
+                    "collision_props":	null,
+                    "copy_from_source":	true,
+                    "func":	"omni.isaac.lab.sim.spawners.shapes.shapes:spawn_sphere",
+                    "mass_props":	null,
+                    "physics_material":	null,
+                    "physics_material_path":	"material",
+                    "radius":	0.0335,
+                    "rigid_props":	null,
+                    "semantic_tags":	null,
+                    "visible":	true,
+                    "visual_material":	{
+                        "diffuse_color":	[
+                            0.4,
+                            0.3,
+                            1.0
+                        ],
+                        "emissive_color":	[
+                            0.0,
+                            0.0,
+                            0.0
+                        ],
+                        "func":	"omni.isaac.lab.sim.spawners.materials.visual_materials:spawn_preview_surface",
+                        "metallic":	0.0,
+                        "opacity":	1.0,
+                        "roughness":	0.5
+                    },
+                    "visual_material_path":	"material"
+                }
+            },
+            "prim_path":	"/Visuals/goal_marker"
+        },
+        "is_finite_horizon":	false,
+        "left_robot_cfg":	{
+            "actuators":	{
+                "fingers":	{
+                    "armature":	null,
+                    "class_type":	"omni.isaac.lab.actuators.actuator_pd:ImplicitActuator",
+                    "damping":	{
+                        "robot0_(FF|MF|RF|LF|TH)J(3|2|1)":	0.1,
+                        "robot0_(LF|TH)J4":	0.1,
+                        "robot0_THJ0":	0.1,
+                        "robot0_WRJ.*":	0.5
+                    },
+                    "effort_limit":	{
+                        "robot0_(FF|MF|RF|LF)J1":	0.7245,
+                        "robot0_FFJ(3|2)":	0.9,
+                        "robot0_LFJ(4|3|2)":	0.9,
+                        "robot0_MFJ(3|2)":	0.9,
+                        "robot0_RFJ(3|2)":	0.9,
+                        "robot0_THJ(2|1)":	0.99,
+                        "robot0_THJ0":	0.81,
+                        "robot0_THJ3":	1.45,
+                        "robot0_THJ4":	2.3722,
+                        "robot0_WRJ0":	2.175,
+                        "robot0_WRJ1":	4.785
+                    },
+                    "friction":	null,
+                    "joint_names_expr":	[
+                        "robot0_WR.*",
+                        "robot0_(FF|MF|RF|LF|TH)J(3|2|1)",
+                        "robot0_(LF|TH)J4",
+                        "robot0_THJ0"
+                    ],
+                    "stiffness":	{
+                        "robot0_(FF|MF|RF|LF|TH)J(3|2|1)":	1.0,
+                        "robot0_(LF|TH)J4":	1.0,
+                        "robot0_THJ0":	1.0,
+                        "robot0_WRJ.*":	5.0
+                    },
+                    "velocity_limit":	null
+                }
+            },
+            "class_type":	"omni.isaac.lab.assets.articulation.articulation:Articulation",
+            "collision_group":	0,
+            "debug_vis":	false,
+            "init_state":	{
+                "ang_vel":	[
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                "joint_pos":	{
+                    ".*":	0.0
+                },
+                "joint_vel":	{
+                    ".*":	0.0
+                },
+                "lin_vel":	[
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                "pos":	[
+                    0.0,
+                    -1.0,
+                    0.5
+                ],
+                "rot":	[
+                    0.0,
+                    0.0,
+                    0.0,
+                    1.0
+                ]
+            },
+            "prim_path":	"/World/envs/env_.*/LeftRobot",
+            "soft_joint_pos_limit_factor":	1.0,
+            "spawn":	{
+                "activate_contact_sensors":	false,
+                "articulation_props":	{
+                    "articulation_enabled":	null,
+                    "enabled_self_collisions":	true,
+                    "fix_root_link":	null,
+                    "sleep_threshold":	0.005,
+                    "solver_position_iteration_count":	8,
+                    "solver_velocity_iteration_count":	0,
+                    "stabilization_threshold":	0.0005
+                },
+                "collision_props":	null,
+                "copy_from_source":	true,
+                "deformable_props":	null,
+                "fixed_tendons_props":	{
+                    "damping":	0.1,
+                    "limit_stiffness":	30.0,
+                    "offset":	null,
+                    "rest_length":	null,
+                    "stiffness":	null,
+                    "tendon_enabled":	null
+                },
+                "func":	"omni.isaac.lab.sim.spawners.from_files.from_files:spawn_from_usd",
+                "joint_drive_props":	{
+                    "drive_type":	"force"
+                },
+                "mass_props":	null,
+                "rigid_props":	{
+                    "angular_damping":	null,
+                    "disable_gravity":	true,
+                    "enable_gyroscopic_forces":	null,
+                    "kinematic_enabled":	null,
+                    "linear_damping":	null,
+                    "max_angular_velocity":	null,
+                    "max_contact_impulse":	null,
+                    "max_depenetration_velocity":	1000.0,
+                    "max_linear_velocity":	null,
+                    "retain_accelerations":	true,
+                    "rigid_body_enabled":	null,
+                    "sleep_threshold":	null,
+                    "solver_position_iteration_count":	null,
+                    "solver_velocity_iteration_count":	null,
+                    "stabilization_threshold":	null
+                },
+                "scale":	null,
+                "semantic_tags":	null,
+                "usd_path":	"http://omniverse-content-production.s3-us-west-2.amazonaws.com/Assets/Isaac/4.2/Isaac/Robots/ShadowHand/shadow_hand_instanceable.usd",
+                "variants":	null,
+                "visible":	true,
+                "visual_material":	null,
+                "visual_material_path":	"material"
+            }
+        },
+        "num_actions":	null,
+        "num_observations":	null,
+        "num_states":	null,
+        "object_cfg":	{
+            "class_type":	"omni.isaac.lab.assets.rigid_object.rigid_object:RigidObject",
+            "collision_group":	0,
+            "debug_vis":	false,
+            "init_state":	{
+                "ang_vel":	[
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                "lin_vel":	[
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                "pos":	[
+                    0.0,
+                    -0.39,
+                    0.54
+                ],
+                "rot":	[
+                    1.0,
+                    0.0,
+                    0.0,
+                    0.0
+                ]
+            },
+            "prim_path":	"/World/envs/env_.*/object",
+            "spawn":	{
+                "activate_contact_sensors":	false,
+                "collision_props":	{
+                    "collision_enabled":	null,
+                    "contact_offset":	null,
+                    "min_torsional_patch_radius":	null,
+                    "rest_offset":	null,
+                    "torsional_patch_radius":	null
+                },
+                "copy_from_source":	true,
+                "func":	"omni.isaac.lab.sim.spawners.shapes.shapes:spawn_sphere",
+                "mass_props":	{
+                    "density":	500.0,
+                    "mass":	null
+                },
+                "physics_material":	{
+                    "compliant_contact_damping":	0.0,
+                    "compliant_contact_stiffness":	0.0,
+                    "dynamic_friction":	0.5,
+                    "friction_combine_mode":	"average",
+                    "func":	"omni.isaac.lab.sim.spawners.materials.physics_materials:spawn_rigid_body_material",
+                    "improve_patch_friction":	true,
+                    "restitution":	0.0,
+                    "restitution_combine_mode":	"average",
+                    "static_friction":	0.7
+                },
+                "physics_material_path":	"material",
+                "radius":	0.0335,
+                "rigid_props":	{
+                    "angular_damping":	null,
+                    "disable_gravity":	false,
+                    "enable_gyroscopic_forces":	true,
+                    "kinematic_enabled":	false,
+                    "linear_damping":	null,
+                    "max_angular_velocity":	null,
+                    "max_contact_impulse":	null,
+                    "max_depenetration_velocity":	1000.0,
+                    "max_linear_velocity":	null,
+                    "retain_accelerations":	null,
+                    "rigid_body_enabled":	null,
+                    "sleep_threshold":	0.005,
+                    "solver_position_iteration_count":	8,
+                    "solver_velocity_iteration_count":	0,
+                    "stabilization_threshold":	0.0025
+                },
+                "semantic_tags":	null,
+                "visible":	true,
+                "visual_material":	{
+                    "diffuse_color":	[
+                        0.8,
+                        1.0,
+                        0.0
+                    ],
+                    "emissive_color":	[
+                        0.0,
+                        0.0,
+                        0.0
+                    ],
+                    "func":	"omni.isaac.lab.sim.spawners.materials.visual_materials:spawn_preview_surface",
+                    "metallic":	0.0,
+                    "opacity":	1.0,
+                    "roughness":	0.5
+                },
+                "visual_material_path":	"material"
+            }
+        },
+        "observation_noise_model":	null,
+        "observation_spaces":	{
+            "left_hand":	157,
+            "right_hand":	157
+        },
+        "possible_agents":	[
+            "right_hand",
+            "left_hand"
+        ],
+        "reset_dof_pos_noise":	0.2,
+        "reset_dof_vel_noise":	0.0,
+        "reset_position_noise":	0.01,
+        "right_robot_cfg":	{
+            "actuators":	{
+                "fingers":	{
+                    "armature":	null,
+                    "class_type":	"omni.isaac.lab.actuators.actuator_pd:ImplicitActuator",
+                    "damping":	{
+                        "robot0_(FF|MF|RF|LF|TH)J(3|2|1)":	0.1,
+                        "robot0_(LF|TH)J4":	0.1,
+                        "robot0_THJ0":	0.1,
+                        "robot0_WRJ.*":	0.5
+                    },
+                    "effort_limit":	{
+                        "robot0_(FF|MF|RF|LF)J1":	0.7245,
+                        "robot0_FFJ(3|2)":	0.9,
+                        "robot0_LFJ(4|3|2)":	0.9,
+                        "robot0_MFJ(3|2)":	0.9,
+                        "robot0_RFJ(3|2)":	0.9,
+                        "robot0_THJ(2|1)":	0.99,
+                        "robot0_THJ0":	0.81,
+                        "robot0_THJ3":	1.45,
+                        "robot0_THJ4":	2.3722,
+                        "robot0_WRJ0":	2.175,
+                        "robot0_WRJ1":	4.785
+                    },
+                    "friction":	null,
+                    "joint_names_expr":	[
+                        "robot0_WR.*",
+                        "robot0_(FF|MF|RF|LF|TH)J(3|2|1)",
+                        "robot0_(LF|TH)J4",
+                        "robot0_THJ0"
+                    ],
+                    "stiffness":	{
+                        "robot0_(FF|MF|RF|LF|TH)J(3|2|1)":	1.0,
+                        "robot0_(LF|TH)J4":	1.0,
+                        "robot0_THJ0":	1.0,
+                        "robot0_WRJ.*":	5.0
+                    },
+                    "velocity_limit":	null
+                }
+            },
+            "class_type":	"omni.isaac.lab.assets.articulation.articulation:Articulation",
+            "collision_group":	0,
+            "debug_vis":	false,
+            "init_state":	{
+                "ang_vel":	[
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                "joint_pos":	{
+                    ".*":	0.0
+                },
+                "joint_vel":	{
+                    ".*":	0.0
+                },
+                "lin_vel":	[
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                "pos":	[
+                    0.0,
+                    0.0,
+                    0.5
+                ],
+                "rot":	[
+                    1.0,
+                    0.0,
+                    0.0,
+                    0.0
+                ]
+            },
+            "prim_path":	"/World/envs/env_.*/RightRobot",
+            "soft_joint_pos_limit_factor":	1.0,
+            "spawn":	{
+                "activate_contact_sensors":	false,
+                "articulation_props":	{
+                    "articulation_enabled":	null,
+                    "enabled_self_collisions":	true,
+                    "fix_root_link":	null,
+                    "sleep_threshold":	0.005,
+                    "solver_position_iteration_count":	8,
+                    "solver_velocity_iteration_count":	0,
+                    "stabilization_threshold":	0.0005
+                },
+                "collision_props":	null,
+                "copy_from_source":	true,
+                "deformable_props":	null,
+                "fixed_tendons_props":	{
+                    "damping":	0.1,
+                    "limit_stiffness":	30.0,
+                    "offset":	null,
+                    "rest_length":	null,
+                    "stiffness":	null,
+                    "tendon_enabled":	null
+                },
+                "func":	"omni.isaac.lab.sim.spawners.from_files.from_files:spawn_from_usd",
+                "joint_drive_props":	{
+                    "drive_type":	"force"
+                },
+                "mass_props":	null,
+                "rigid_props":	{
+                    "angular_damping":	null,
+                    "disable_gravity":	true,
+                    "enable_gyroscopic_forces":	null,
+                    "kinematic_enabled":	null,
+                    "linear_damping":	null,
+                    "max_angular_velocity":	null,
+                    "max_contact_impulse":	null,
+                    "max_depenetration_velocity":	1000.0,
+                    "max_linear_velocity":	null,
+                    "retain_accelerations":	true,
+                    "rigid_body_enabled":	null,
+                    "sleep_threshold":	null,
+                    "solver_position_iteration_count":	null,
+                    "solver_velocity_iteration_count":	null,
+                    "stabilization_threshold":	null
+                },
+                "scale":	null,
+                "semantic_tags":	null,
+                "usd_path":	"http://omniverse-content-production.s3-us-west-2.amazonaws.com/Assets/Isaac/4.2/Isaac/Robots/ShadowHand/shadow_hand_instanceable.usd",
+                "variants":	null,
+                "visible":	true,
+                "visual_material":	null,
+                "visual_material_path":	"material"
+            }
+        },
+        "scene":	{
+            "env_spacing":	1.5,
+            "lazy_sensor_update":	true,
+            "num_envs":	2048,
+            "replicate_physics":	true
+        },
+        "seed":	null,
+        "sim":	{
+            "device":	"cuda:0",
+            "disable_contact_processing":	false,
+            "dt":	0.008333333333333333,
+            "enable_scene_query_support":	false,
+            "gravity":	[
+                0.0,
+                0.0,
+                -9.81
+            ],
+            "physics_material":	{
+                "compliant_contact_damping":	0.0,
+                "compliant_contact_stiffness":	0.0,
+                "dynamic_friction":	1.0,
+                "friction_combine_mode":	"average",
+                "func":	"omni.isaac.lab.sim.spawners.materials.physics_materials:spawn_rigid_body_material",
+                "improve_patch_friction":	true,
+                "restitution":	0.0,
+                "restitution_combine_mode":	"average",
+                "static_friction":	1.0
+            },
+            "physics_prim_path":	"/physicsScene",
+            "physx":	{
+                "bounce_threshold_velocity":	0.2,
+                "enable_ccd":	false,
+                "enable_enhanced_determinism":	false,
+                "enable_stabilization":	true,
+                "friction_correlation_distance":	0.025,
+                "friction_offset_threshold":	0.04,
+                "gpu_collision_stack_size":	67108864,
+                "gpu_found_lost_aggregate_pairs_capacity":	33554432,
+                "gpu_found_lost_pairs_capacity":	2097152,
+                "gpu_heap_capacity":	67108864,
+                "gpu_max_num_partitions":	8,
+                "gpu_max_particle_contacts":	1048576,
+                "gpu_max_rigid_contact_count":	8388608,
+                "gpu_max_rigid_patch_count":	163840,
+                "gpu_max_soft_body_contacts":	1048576,
+                "gpu_temp_buffer_capacity":	16777216,
+                "gpu_total_aggregate_pairs_capacity":	2097152,
+                "max_position_iteration_count":	255,
+                "max_velocity_iteration_count":	255,
+                "min_position_iteration_count":	1,
+                "min_velocity_iteration_count":	0,
+                "solver_type":	1
+            },
+            "render_interval":	2,
+            "use_fabric":	true
+        },
+        "state_space":	290,
+        "ui_window_class_type":	"omni.isaac.lab.envs.ui.base_env_window:BaseEnvWindow",
+        "vel_obs_scale":	0.2,
+        "viewer":	{
+            "asset_name":	null,
+            "cam_prim_path":	"/OmniverseKit_Persp",
+            "env_index":	0,
+            "eye":	[
+                7.5,
+                7.5,
+                7.5
+            ],
+            "lookat":	[
+                0.0,
+                0.0,
+                0.0
+            ],
+            "origin_type":	"world",
+            "resolution":	[
+                1280,
+                720
+            ]
+        }
+    },
+    "main_args":	{
+        "active_gpu":	0,
+        "algo":	"happo",
+        "cpu":	false,
+        "device":	"cuda:0",
+        "distributed":	false,
+        "env":	"Isaac-Shadow-Hand-Over-Direct-v0",
+        "exp_name":	"Isaac-Shadow-Hand-Over-Direct-v0",
+        "headless":	true,
+        "hide_ui":	true,
+        "info":	false,
+        "max_iterations":	null,
+        "num_envs":	4096,
+        "physics_gpu":	0,
+        "seed":	null,
+        "verbose":	false,
+        "video":	false,
+        "video_interval":	2000,
+        "video_length":	200
+    }
+}
