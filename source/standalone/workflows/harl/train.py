@@ -12,10 +12,9 @@ parser.add_argument("--video_interval", type=int, default=2000, help="Interval b
 parser.add_argument("--num_envs", type=int, default=None, help="Number of environments to simulate.")
 parser.add_argument("--task", type=str, default=None, help="Name of the task.")
 parser.add_argument("--seed", type=int, default=None, help="Seed used for the environment")
-parser.add_argument(
-    "--distributed", action="store_true", default=False, help="Run training with multiple GPUs or nodes."
-)
-parser.add_argument("--max_iterations", type=int, default=None, help="RL Policy training iterations.")
+parser.add_argument("--save_interval", type=int, default=None, help="How often to save the model")
+parser.add_argument("--log_interval", type=int, default=None, help="How often to log outputs")
+parser.add_argument("--num_env_steps", type=int, default=None, help="RL Policy training iterations.")
 parser.add_argument(
         "--algorihm",
         type=str,
@@ -23,9 +22,16 @@ parser.add_argument(
         choices=[
             "happo",
             "hatrpo",
-            "haa2c"
+            "haa2c",
+            "haddpg",
+            "hatd3",
+            "hasac",
+            "had3qn",
+            "maddpg",
+            "matd3",
+            "mappo",
         ],
-        help="Algorithm name. Choose from: happo, hatrpo, haa2c",
+        help="Algorithm name. Choose from: happo, hatrpo, haa2c, haddpg, hatd3, hasac, had3qn, maddpg, matd3, mappo.",
     )
 
 # append AppLauncher cli args
@@ -47,7 +53,7 @@ import gymnasium as gym
 import os
 import random
 from datetime import datetime
-from harl.runners import ISSAC_LAB_RUNNER_REGISTRY
+from harl.runners import RUNNER_REGISTRY
 
 from omni.isaac.lab.envs import (
     DirectMARLEnv,
@@ -63,26 +69,32 @@ from omni.isaac.lab.utils.io import dump_pickle, dump_yaml
 import omni.isaac.lab_tasks  # noqa: F401
 from omni.isaac.lab_tasks.utils.hydra import hydra_task_config
 
-agent_cfg_entry_point = "harl_cfg_entry_point"
+agent_cfg_entry_point = "harl_ppo_cfg_entry_point"
 
 @hydra_task_config(args_cli.task, agent_cfg_entry_point)
 def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agent_cfg: dict):
 
+    args = args_cli.__dict__
 
-    agent_cfg["eval"]["use_eval"] = False
+    args['env'] = 'isaaclab'
+    args['algo'] = args['algorihm']
+    args['exp_name'] = args['task']
 
+    algo_args = agent_cfg
 
-    # #convert configs to dicts
-    # args = vars(args_cli)
-    # env_cfg_dict = env_cfg.to_dict()
-    # env_cfg_dict['cfg_class'] = env_cfg
+    algo_args['eval']['use_eval'] = False
+    algo_args['train']['n_rollout_threads'] = args['num_envs']
+    algo_args['train']['num_env_steps'] = args['num_env_steps']
+    algo_args['train']['eval_interval'] = args['save_interval']
+    algo_args['train']['log_interval'] = args['log_interval']
 
-    # #remap args dict to match the expected args
-    # args['env'] = args.pop('task')
-    # args['exp_name'] = args['env']
+    env_args = {}
+    env_cfg.scene.num_envs = args['num_envs']
+    env_args['task'] = args['task']
+    env_args['config'] = env_cfg
 
     #create runner
-    runner = ISSAC_LAB_RUNNER_REGISTRY[args_cli.algorithm](agent_cfg, env)
+    runner = RUNNER_REGISTRY[args["algo"]](args, algo_args, env_args)
     runner.run()
     runner.close()
 
