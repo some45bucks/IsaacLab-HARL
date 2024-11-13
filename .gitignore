@@ -40,6 +40,7 @@ docker/.container.cfg
 **/videos/*
 **/wandb/*
 **/.neptune/*
+**/results/*
 docker/artifacts/
 *.tmp
 
@@ -57,3 +58,5 @@ _build
 **/runs/*
 **/logs/*
 **/recordings/*
+
+

@@ -2,18 +2,20 @@
 import argparse
 import sys
 import json
+import time
 
 from omni.isaac.lab.app import AppLauncher
 
 parser = argparse.ArgumentParser(description="Train an RL agent with HARL.")
-parser.add_argument("--video", action="store_true", default=False, help="Record videos during training.")
+parser.add_argument("--video", action="store_true", default=True, help="Record videos during training.")
 parser.add_argument("--video_length", type=int, default=200, help="Length of the recorded video (in steps).")
-parser.add_argument("--video_interval", type=int, default=2000, help="Interval between video recordings (in steps).")
+parser.add_argument("--video_interval", type=int, default=200, help="Interval between video recordings (in steps).")
 parser.add_argument("--num_envs", type=int, default=None, help="Number of environments to simulate.")
 parser.add_argument("--task", type=str, default=None, help="Name of the task.")
 parser.add_argument("--seed", type=int, default=None, help="Seed used for the environment")
 parser.add_argument("--save_interval", type=int, default=None, help="How often to save the model")
 parser.add_argument("--log_interval", type=int, default=None, help="How often to log outputs")
+parser.add_argument("--exp_name", type=str, default="test", help="Name of the Experiment")
 parser.add_argument("--num_env_steps", type=int, default=None, help="RL Policy training iterations.")
 parser.add_argument(
         "--algorihm",
@@ -78,7 +80,6 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
 
     args['env'] = 'isaaclab'
     args['algo'] = args['algorihm']
-    args['exp_name'] = args['task']
 
     algo_args = agent_cfg
 
@@ -92,6 +93,13 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     env_cfg.scene.num_envs = args['num_envs']
     env_args['task'] = args['task']
     env_args['config'] = env_cfg
+    hms_time = time.strftime("%Y-%m-%d-%H-%M-%S", time.localtime())
+    env_args['video_settings'] = {
+        "video": args["video"],
+        "video_length": args["video_length"],
+        "video_interval": args["video_interval"],
+        "log_dir": os.path.join(algo_args['logger']['log_dir'],"isaaclab",args['task'],args['algorihm'], args["exp_name"], "-".join(["seed-{:0>5}".format(agent_cfg['seed']['seed']), hms_time]), 'videos'),
+    }
 
     #create runner
     runner = RUNNER_REGISTRY[args["algo"]](args, algo_args, env_args)
