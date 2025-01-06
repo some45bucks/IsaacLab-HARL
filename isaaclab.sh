@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# Copyright (c) 2022-2024, The Isaac Lab Project Developers.
+# Copyright (c) 2022-2025, The Isaac Lab Project Developers.
 # All rights reserved.
 #
 # SPDX-License-Identifier: BSD-3-Clause
@@ -328,7 +328,7 @@ while [[ $# -gt 0 ]]; do
             fi
             # run the formatter over the repository
             # check if pre-commit is installed
-            if [ ! command -v pre-commit &>/dev/null ]; then
+            if ! command -v pre-commit &>/dev/null; then
                 echo "[INFO] Installing pre-commit..."
                 pip install pre-commit
             fi
@@ -350,7 +350,7 @@ while [[ $# -gt 0 ]]; do
             python_exe=$(extract_python_exe)
             echo "[INFO] Using python from: ${python_exe}"
             shift # past argument
-            ${python_exe} $@
+            ${python_exe} "$@"
             # exit neatly
             break
             ;;
