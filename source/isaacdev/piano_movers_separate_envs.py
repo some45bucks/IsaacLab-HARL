@@ -26,7 +26,7 @@ from omni.isaac.lab.app import AppLauncher
 
 # add argparse arguments
 parser = argparse.ArgumentParser(description="Tutorial on creating a quadruped base environment.")
-parser.add_argument("--num_envs", type=int, default=1, help="Number of environments to spawn.")
+parser.add_argument("--num_envs", type=int, default=2, help="Number of environments to spawn.")
 
 # append AppLauncher cli args
 AppLauncher.add_app_launcher_args(parser)
@@ -55,7 +55,8 @@ from omni.isaac.lab.terrains import TerrainImporterCfg
 from omni.isaac.lab.utils import configclass
 from omni.isaac.lab.utils.assets import ISAACLAB_NUCLEUS_DIR, check_file_path, read_file
 from omni.isaac.lab.utils.noise import AdditiveUniformNoiseCfg as Unoise
-from omni.isaac.lab.assets import ArticulationCfg, AssetBaseCfg
+import omni.isaac.lab.terrains as terrain_gen
+
 
 ##
 # Pre-defined configs
@@ -63,6 +64,18 @@ from omni.isaac.lab.assets import ArticulationCfg, AssetBaseCfg
 from omni.isaac.lab.terrains.config.rough import ROUGH_TERRAINS_CFG  # isort: skip
 from omni.isaac.lab_assets.anymal import ANYMAL_C_CFG  # isort: skip
 
+ROUGH_TERRAINS_CFG.num_cols = 1
+ROUGH_TERRAINS_CFG.num_rows = 1
+ROUGH_TERRAINS_CFG.sub_terrains = {
+        "pyramid_stairs": terrain_gen.MeshPyramidStairsTerrainCfg(
+            proportion=0.2,
+            step_height_range=(0.05, 0.23),
+            step_width=0.3,
+            platform_width=3.0,
+            border_width=1.0,
+            holes=False,
+        )
+}
 
 ##
 # Custom observation terms
@@ -78,10 +91,6 @@ def constant_commands(env: ManagerBasedEnv) -> torch.Tensor:
 # Scene definition
 ##
 
-NUM_ROBOTS = 2
-ROBOT_1 = {"asset_cfg": SceneEntityCfg(f"robot_1")}
-ROBOT_2 = {"asset_cfg": SceneEntityCfg(f"robot_2")}
-
 
 @configclass
 class MySceneCfg(InteractiveSceneCfg):
@@ -92,7 +101,6 @@ class MySceneCfg(InteractiveSceneCfg):
     #     prim_path="/World/ground",
     #     terrain_type="generator",
     #     terrain_generator=ROUGH_TERRAINS_CFG,
-    #     max_init_terrain_level=5,
     #     collision_group=-1,
     #     physics_material=sim_utils.RigidBodyMaterialCfg(
     #         friction_combine_mode="multiply",
@@ -102,26 +110,17 @@ class MySceneCfg(InteractiveSceneCfg):
     #     ),
     #     debug_vis=False,
     # )
-
     terrain = AssetBaseCfg(prim_path="/World/ground", spawn=sim_utils.GroundPlaneCfg())
 
-    robot_1 = ANYMAL_C_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot_1")
-    # articulation - robot 2
-    robot_2 = ANYMAL_C_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot_2")
-    robot_2.init_state.pos = (0.0, 1.0, 0.6)
+    # add robot
+    robot: ArticulationCfg = ANYMAL_C_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
+    robot.init_state.rot = (1.0, 0.0, 0.0, 1.0)
+    robot.init_state.pos = (0.0, -10.0, 1.0)
+
 
     # sensors
-    height_scanner_1 = RayCasterCfg(
-        prim_path="{ENV_REGEX_NS}/Robot_1/base",
-        offset=RayCasterCfg.OffsetCfg(pos=(0.0, 0.0, 20.0)),
-        attach_yaw_only=True,
-        pattern_cfg=patterns.GridPatternCfg(resolution=0.1, size=[1.6, 1.0]),
-        debug_vis=True,
-        mesh_prim_paths=["/World/ground"],
-    )
-
-    height_scanner_2 = RayCasterCfg(
-        prim_path="{ENV_REGEX_NS}/Robot_2/base",
+    height_scanner = RayCasterCfg(
+        prim_path="{ENV_REGEX_NS}/Robot/base",
         offset=RayCasterCfg.OffsetCfg(pos=(0.0, 0.0, 20.0)),
         attach_yaw_only=True,
         pattern_cfg=patterns.GridPatternCfg(resolution=0.1, size=[1.6, 1.0]),
@@ -135,6 +134,23 @@ class MySceneCfg(InteractiveSceneCfg):
         spawn=sim_utils.DistantLightCfg(color=(0.75, 0.75, 0.75), intensity=3000.0),
     )
 
+    
+    cfg_rec_prism_cfg = AssetBaseCfg(
+        prim_path="/World/Objects/cube",
+        spawn=sim_utils.CuboidCfg( 
+            size=(5,.1,.1),
+            rigid_props=sim_utils.RigidBodyPropertiesCfg(),
+            mass_props=sim_utils.MassPropertiesCfg(mass=1.0),
+            collision_props=sim_utils.CollisionPropertiesCfg(),
+            visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(0.0, 1.0, 0.0))
+        ),
+    )
+    cfg_rec_prism_cfg.init_state.pos = (0.0, -10.0, 2.0)
+
+
+    
+
+
 
 ##
 # MDP settings
@@ -145,10 +161,7 @@ class MySceneCfg(InteractiveSceneCfg):
 class ActionsCfg:
     """Action specifications for the MDP."""
 
-    joint_pos_1 = mdp.JointPositionActionCfg(asset_name="robot_1", joint_names=[".*"], scale=0.5, use_default_offset=True)
-    joint_pos_1 = mdp.JointPositionActionCfg(asset_name="robot_2", joint_names=[".*"], scale=0.5, use_default_offset=True)
-
-
+    joint_pos = mdp.JointPositionActionCfg(asset_name="robot", joint_names=[".*"], scale=0.5, use_default_offset=True)
 
 
 @configclass
@@ -160,43 +173,22 @@ class ObservationsCfg:
         """Observations for policy group."""
 
         # observation terms (order preserved)
-        base_lin_vel = ObsTerm(func=mdp.base_lin_vel, noise=Unoise(n_min=-0.1, n_max=0.1), params=ROBOT_1)
-        base_ang_vel = ObsTerm(func=mdp.base_ang_vel, noise=Unoise(n_min=-0.2, n_max=0.2), params=ROBOT_1)
+        base_lin_vel = ObsTerm(func=mdp.base_lin_vel, noise=Unoise(n_min=-0.1, n_max=0.1))
+        base_ang_vel = ObsTerm(func=mdp.base_ang_vel, noise=Unoise(n_min=-0.2, n_max=0.2))
         projected_gravity = ObsTerm(
             func=mdp.projected_gravity,
             noise=Unoise(n_min=-0.05, n_max=0.05),
-            params=ROBOT_1
         )
-        joint_pos = ObsTerm(func=mdp.joint_pos_rel, noise=Unoise(n_min=-0.01, n_max=0.01), params=ROBOT_1)
-        joint_vel = ObsTerm(func=mdp.joint_vel_rel, noise=Unoise(n_min=-1.5, n_max=1.5), params=ROBOT_1)
+        velocity_commands = ObsTerm(func=constant_commands)
+        joint_pos = ObsTerm(func=mdp.joint_pos_rel, noise=Unoise(n_min=-0.01, n_max=0.01))
+        joint_vel = ObsTerm(func=mdp.joint_vel_rel, noise=Unoise(n_min=-1.5, n_max=1.5))
+        actions = ObsTerm(func=mdp.last_action)
         height_scan = ObsTerm(
             func=mdp.height_scan,
-            params={"sensor_cfg": SceneEntityCfg(f"height_scanner_1")},
+            params={"sensor_cfg": SceneEntityCfg("height_scanner")},
             noise=Unoise(n_min=-0.1, n_max=0.1),
             clip=(-1.0, 1.0),
         )
-
-        # observation terms (order preserved)
-        base_lin_vel2 = ObsTerm(func=mdp.base_lin_vel, noise=Unoise(n_min=-0.1, n_max=0.1), params=ROBOT_2)
-        base_ang_vel2 = ObsTerm(func=mdp.base_ang_vel, noise=Unoise(n_min=-0.2, n_max=0.2), params=ROBOT_2)
-        projected_gravity2 = ObsTerm(
-            func=mdp.projected_gravity,
-            noise=Unoise(n_min=-0.05, n_max=0.05),
-            params=ROBOT_2
-        )
-        # velocity_commands2 = ObsTerm(func=constant_commands, params=ROBOT_2)
-        joint_pos2 = ObsTerm(func=mdp.joint_pos_rel, noise=Unoise(n_min=-0.01, n_max=0.01), params=ROBOT_2)
-        joint_vel2 = ObsTerm(func=mdp.joint_vel_rel, noise=Unoise(n_min=-1.5, n_max=1.5), params=ROBOT_2)
-        # actions2 = ObsTerm(func=mdp.last_action, params = ROBOT_2)
-        height_scan2 = ObsTerm(
-            func=mdp.height_scan,
-            params={"sensor_cfg": SceneEntityCfg(f"height_scanner_2")},
-            noise=Unoise(n_min=-0.1, n_max=0.1),
-            clip=(-1.0, 1.0),
-        )
-        
-        velocity_commands = ObsTerm(func=constant_commands)
-        actions = ObsTerm(func=mdp.last_action)
 
         def __post_init__(self):
             self.enable_corruption = True
@@ -223,7 +215,7 @@ class QuadrupedEnvCfg(ManagerBasedEnvCfg):
     """Configuration for the locomotion velocity-tracking environment."""
 
     # Scene settings
-    scene: MySceneCfg = MySceneCfg(num_envs=args_cli.num_envs, env_spacing=2)
+    scene: MySceneCfg = MySceneCfg(num_envs=args_cli.num_envs, env_spacing=3)
     # Basic settings
     observations: ObservationsCfg = ObservationsCfg()
     actions: ActionsCfg = ActionsCfg()
@@ -238,9 +230,8 @@ class QuadrupedEnvCfg(ManagerBasedEnvCfg):
         # self.sim.physics_material = self.scene.terrain.physics_material
         # update sensor update periods
         # we tick all the sensors based on the smallest update period (physics update period)
-
-        self.scene.height_scanner_1.update_period = self.decimation * self.sim.dt  # 50 Hz
-        self.scene.height_scanner_2.update_period = self.decimation * self.sim.dt  # 50 Hz
+        if self.scene.height_scanner is not None:
+            self.scene.height_scanner.update_period = self.decimation * self.sim.dt  # 50 Hz
 
 
 def main():
@@ -248,6 +239,7 @@ def main():
     # setup base environment
     env_cfg = QuadrupedEnvCfg()
     env = ManagerBasedEnv(cfg=env_cfg)
+    env.sim.render_interval = env_cfg.decimation
 
     # load level policy
     policy_path = ISAACLAB_NUCLEUS_DIR + "/Policies/ANYmal-C/HeightScan/policy.pt"
