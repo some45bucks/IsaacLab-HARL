@@ -65,3 +65,8 @@ Replace `piano_movers_direct_env.py` with the path to your environment script.
 
 By following these steps, you can successfully register and run your custom environments in Isaac Lab.
 
+# TODO
+
+- The environment only passes in one action for each robot at a time when you instantiate them in a single environment, which
+is an issue because the global actions that we store keep track of the actions for all the robots, so need to figure out a 
+way to update the global actions or change the environment code so that is processes all the actions for all the robots at the same time.
