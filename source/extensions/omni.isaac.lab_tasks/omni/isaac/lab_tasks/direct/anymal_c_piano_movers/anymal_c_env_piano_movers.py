@@ -114,7 +114,7 @@ class AnymalCFlatEnvCfg(DirectRLEnvCfg):
     )
 
     # scene
-    scene: InteractiveSceneCfg = InteractiveSceneCfg(num_envs=4096, env_spacing=4.0, replicate_physics=True)
+    scene: InteractiveSceneCfg = InteractiveSceneCfg(num_envs=1, env_spacing=4.0, replicate_physics=True)
 
     # events
     events: EventCfg = EventCfg()
@@ -131,6 +131,7 @@ class AnymalCFlatEnvCfg(DirectRLEnvCfg):
         prim_path="/World/envs/env_.*/Robot_1/.*", history_length=3, update_period=0.005, track_air_time=True
     )
     robot_1.init_state.rot = (1.0, 0.0, 0.0, 1.0)
+    robot_1.init_state.pos = (0.0, 1.0, 0.5)
 
     # reward scales
     lin_vel_reward_scale = 1.0
@@ -198,9 +199,9 @@ class AnymalCPianoMoversEnv(DirectRLEnv):
     def __init__(self, cfg: AnymalCFlatEnvCfg | AnymalCRoughEnvCfg, render_mode: str | None = None, **kwargs):
         super().__init__(cfg, render_mode, **kwargs)
         # Joint position command (deviation from default joint positions)
-        self._actions = torch.zeros(self.num_envs, gym.spaces.flatdim(self.single_action_space), device=self.device)
-        self._previous_actions = torch.zeros(
-            self.num_envs, gym.spaces.flatdim(self.single_action_space), device=self.device
+        self.actions = torch.zeros(self.num_envs*self.num_robots, gym.spaces.flatdim(self.single_action_space), device=self.device)
+        self.previous_actions = torch.zeros(
+            self.num_envs*self.num_robots, gym.spaces.flatdim(self.single_action_space), device=self.device
         )
 
         # X/Y linear velocity and yaw angular velocity commands
@@ -261,11 +262,10 @@ class AnymalCPianoMoversEnv(DirectRLEnv):
         light_cfg.func("/World/Light", light_cfg)
 
     def _pre_physics_step(self, actions: torch.Tensor):
-        self.actions = []
-        self.processed_actions = []
+        self.processed_actions = torch.zeros_like(actions)
         for i, robot in enumerate(self.robots):
-            self.actions.append(actions[i].clone())
-            self.processed_actions.append(self.cfg.action_scale * self._actions + robot.data.default_joint_pos)
+            self.actions[i] = actions[i].clone()
+            self.processed_actions[i] = self.cfg.action_scale * self.actions[i] + robot.data.default_joint_pos
 
     def _apply_action(self):
         for i, robot in enumerate(self.robots):
@@ -273,9 +273,8 @@ class AnymalCPianoMoversEnv(DirectRLEnv):
         # self._robot.set_joint_position_target(self._processed_actions)
 
     def _get_observations(self) -> dict:
-        self.previous_actions = [[] for _ in range(self.num_robots)]
-        for i, action in enumerate(self.actions):
-            self.previous_actions[i].append(action.clone())
+        self.previous_actions = self.actions.clone()
+        for i in range(self.num_robots):
             height_data = None
             if isinstance(self.cfg, AnymalCRoughEnvCfg):
                 height_data = (
@@ -283,7 +282,7 @@ class AnymalCPianoMoversEnv(DirectRLEnv):
                 ).clip(-1.0, 1.0)
         
         obs = []
-        for robot in self.robots:
+        for i, robot in enumerate(self.robots):
             obs.append(torch.cat(
             [
                 tensor
@@ -295,7 +294,7 @@ class AnymalCPianoMoversEnv(DirectRLEnv):
                     robot.data.joint_pos - robot.data.default_joint_pos,
                     robot.data.joint_vel,
                     height_data,
-                    self._actions,
+                    self.actions[i].view(1,-1),
                 )
                 if tensor is not None
             ],
@@ -322,8 +321,8 @@ class AnymalCPianoMoversEnv(DirectRLEnv):
             joint_torques = torch.sum(torch.square(robot.data.applied_torque), dim=1)
             # joint acceleration
             joint_accel = torch.sum(torch.square(robot.data.joint_acc), dim=1)
-            # action rate
-            action_rate = torch.sum(torch.square(self._actions - self._previous_actions), dim=1)
+            # action rate            
+            action_rate = torch.sum(torch.square(self.actions[i] - self.previous_actions[i]), dim=1)
             # feet air time
             first_contact = self.contact_sensors[i].compute_first_contact(self.step_dt)[:, self.feet_ids[i]]
             last_air_time = self.contact_sensors[i].data.last_air_time[:, self.feet_ids[i]]
@@ -362,18 +361,27 @@ class AnymalCPianoMoversEnv(DirectRLEnv):
             self._episode_sums[key] += value
         return reward
 
-    def _get_dones(self) -> tuple[torch.Tensor, torch.Tensor]:
-        all_dones = []
-        all_died = []
-        for i in range(self.num_robots):
-            time_out = self.episode_length_buf >= self.max_episode_length - 1
-            net_contact_forces = self.contact_sensors[i].data.net_forces_w_history
-            died = torch.any(torch.max(torch.norm(net_contact_forces[:, :, self.base_ids[i]], dim=-1), dim=1)[0] > 1.0, dim=1)
-            all_dones.append(time_out)
-            all_died.append(died)
+    # def _get_dones(self) -> tuple[torch.Tensor, torch.Tensor]:
+    #     all_dones = []
+    #     all_died = []
+    #     for i in range(self.num_robots):
+    #         time_out = self.episode_length_buf >= self.max_episode_length - 1
+    #         net_contact_forces = self.contact_sensors[i].data.net_forces_w_history
+    #         died = torch.any(torch.max(torch.norm(net_contact_forces[:, :, self.base_ids[i]], dim=-1), dim=1)[0] > 1.0, dim=1)
+    #         all_dones.append(time_out)
+    #         all_died.append(died)
         
-        return torch.any(torch.cat(all_dones), dim=0), torch.any(torch.cat(all_died), dim=0)
+    #     return torch.any(torch.cat(all_dones), dim=0), torch.any(torch.cat(all_died), dim=0)
 
+    def _get_dones(self) -> tuple[torch.Tensor, torch.Tensor]:
+        contact_sensor = self.contact_sensors[0]
+        base_id = self.base_ids[0]
+
+        time_out = self.episode_length_buf >= self.max_episode_length - 1
+        net_contact_forces = contact_sensor.data.net_forces_w_history
+        died = torch.any(torch.max(torch.norm(net_contact_forces[:, :, base_id], dim=-1), dim=1)[0] > 1.0, dim=1)
+        return died, time_out
+    
     def _reset_idx(self, env_ids: torch.Tensor | None):
         for robot in self.robots:
             if env_ids is None or len(env_ids) == self.num_envs:
@@ -383,8 +391,8 @@ class AnymalCPianoMoversEnv(DirectRLEnv):
             if len(env_ids) == self.num_envs:
                 # Spread out the resets to avoid spikes in training when many environments reset at a similar time
                 self.episode_length_buf[:] = torch.randint_like(self.episode_length_buf, high=int(self.max_episode_length))
-            self._actions[env_ids] = 0.0
-            self._previous_actions[env_ids] = 0.0
+            self.actions[env_ids] = 0.0
+            self.previous_actions[env_ids] = 0.0
             # Sample new commands
             self._commands[env_ids] = torch.zeros_like(self._commands[env_ids]).uniform_(-1.0, 1.0)
             # Reset robot state

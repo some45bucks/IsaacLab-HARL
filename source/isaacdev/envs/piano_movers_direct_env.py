@@ -40,7 +40,7 @@ def main():
     """Random actions agent with Isaac Lab environment."""
     # create environment configuration
     env_cfg = parse_env_cfg(
-        'Isaac-Piano-Movers-Flat-Anymal-C-Direct-v0', device=args_cli.device, num_envs=2, use_fabric=not args_cli.disable_fabric
+        'Isaac-Piano-Movers-Flat-Anymal-C-Direct-v0', device=args_cli.device, num_envs=1, use_fabric=not args_cli.disable_fabric
     )
     # create environment
     env = gym.make('Isaac-Piano-Movers-Flat-Anymal-C-Direct-v0', cfg=env_cfg)
