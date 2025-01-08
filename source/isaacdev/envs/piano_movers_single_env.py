@@ -26,7 +26,7 @@ from omni.isaac.lab.app import AppLauncher
 
 # add argparse arguments
 parser = argparse.ArgumentParser(description="Tutorial on creating a quadruped base environment.")
-parser.add_argument("--num_envs", type=int, default=2, help="Number of environments to spawn.")
+parser.add_argument("--num_envs", type=int, default=1, help="Number of environments to spawn.")
 
 # append AppLauncher cli args
 AppLauncher.add_app_launcher_args(parser)
@@ -113,14 +113,27 @@ class MySceneCfg(InteractiveSceneCfg):
     terrain = AssetBaseCfg(prim_path="/World/ground", spawn=sim_utils.GroundPlaneCfg())
 
     # add robot
-    robot: ArticulationCfg = ANYMAL_C_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
-    robot.init_state.rot = (1.0, 0.0, 0.0, 1.0)
-    robot.init_state.pos = (0.0, -10.0, 1.0)
+    robot_1: ArticulationCfg = ANYMAL_C_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot_1")
+    robot_1.init_state.rot = (1.0, 0.0, 0.0, 1.0)
+    robot_1.init_state.pos = (-1.0, -10.0, 1.0)
+
+    robot_2: ArticulationCfg = ANYMAL_C_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot_2")
+    robot_2.init_state.rot = (1.0, 0.0, 0.0, 1.0)
+    robot_2.init_state.pos = (1.0, -10.0, 1.0)
 
 
     # sensors
-    height_scanner = RayCasterCfg(
-        prim_path="{ENV_REGEX_NS}/Robot/base",
+    height_scanner_1 = RayCasterCfg(
+        prim_path="{ENV_REGEX_NS}/Robot_1/base",
+        offset=RayCasterCfg.OffsetCfg(pos=(0.0, 0.0, 20.0)),
+        attach_yaw_only=True,
+        pattern_cfg=patterns.GridPatternCfg(resolution=0.1, size=[1.6, 1.0]),
+        debug_vis=True,
+        mesh_prim_paths=["/World/ground"],
+    )
+
+    height_scanner_2 = RayCasterCfg(
+        prim_path="{ENV_REGEX_NS}/Robot_2/base",
         offset=RayCasterCfg.OffsetCfg(pos=(0.0, 0.0, 20.0)),
         attach_yaw_only=True,
         pattern_cfg=patterns.GridPatternCfg(resolution=0.1, size=[1.6, 1.0]),
@@ -136,7 +149,7 @@ class MySceneCfg(InteractiveSceneCfg):
 
     
     cfg_rec_prism_cfg = AssetBaseCfg(
-        prim_path="/World/Objects/cube",
+        prim_path="{ENV_REGEX_NS}/RecPrism",
         spawn=sim_utils.CuboidCfg( 
             size=(5,.1,.1),
             rigid_props=sim_utils.RigidBodyPropertiesCfg(),
@@ -161,7 +174,8 @@ class MySceneCfg(InteractiveSceneCfg):
 class ActionsCfg:
     """Action specifications for the MDP."""
 
-    joint_pos = mdp.JointPositionActionCfg(asset_name="robot", joint_names=[".*"], scale=0.5, use_default_offset=True)
+    joint_pos_1 = mdp.JointPositionActionCfg(asset_name="robot*", joint_names=[".*"], scale=0.5, use_default_offset=True)
+    # joint_pos_2 = mdp.JointPositionActionCfg(asset_name="robot_2", joint_names=[".*"], scale=0.5, use_default_offset=True)
 
 
 @configclass
@@ -173,19 +187,40 @@ class ObservationsCfg:
         """Observations for policy group."""
 
         # observation terms (order preserved)
-        base_lin_vel = ObsTerm(func=mdp.base_lin_vel, noise=Unoise(n_min=-0.1, n_max=0.1))
-        base_ang_vel = ObsTerm(func=mdp.base_ang_vel, noise=Unoise(n_min=-0.2, n_max=0.2))
+        # robot_1
+        base_lin_vel = ObsTerm(func=mdp.base_lin_vel, noise=Unoise(n_min=-0.1, n_max=0.1), params={"asset_cfg": SceneEntityCfg("robot_1")})
+        base_ang_vel = ObsTerm(func=mdp.base_ang_vel, noise=Unoise(n_min=-0.2, n_max=0.2), params={"asset_cfg": SceneEntityCfg("robot_1")})
         projected_gravity = ObsTerm(
             func=mdp.projected_gravity,
             noise=Unoise(n_min=-0.05, n_max=0.05),
+            params={"asset_cfg": SceneEntityCfg("robot_1")}
         )
         velocity_commands = ObsTerm(func=constant_commands)
-        joint_pos = ObsTerm(func=mdp.joint_pos_rel, noise=Unoise(n_min=-0.01, n_max=0.01))
-        joint_vel = ObsTerm(func=mdp.joint_vel_rel, noise=Unoise(n_min=-1.5, n_max=1.5))
+        joint_pos = ObsTerm(func=mdp.joint_pos_rel, noise=Unoise(n_min=-0.01, n_max=0.01), params={"asset_cfg": SceneEntityCfg("robot_1")})
+        joint_vel = ObsTerm(func=mdp.joint_vel_rel, noise=Unoise(n_min=-1.5, n_max=1.5), params={"asset_cfg": SceneEntityCfg("robot_1")})
         actions = ObsTerm(func=mdp.last_action)
         height_scan = ObsTerm(
             func=mdp.height_scan,
-            params={"sensor_cfg": SceneEntityCfg("height_scanner")},
+            params={"sensor_cfg": SceneEntityCfg("height_scanner_1")},
+            noise=Unoise(n_min=-0.1, n_max=0.1),
+            clip=(-1.0, 1.0),
+        )
+
+        # robot_2
+        base_lin_vel_2 = ObsTerm(func=mdp.base_lin_vel, noise=Unoise(n_min=-0.1, n_max=0.1), params={"asset_cfg": SceneEntityCfg("robot_2")})
+        base_ang_vel_2 = ObsTerm(func=mdp.base_ang_vel, noise=Unoise(n_min=-0.2, n_max=0.2), params={"asset_cfg": SceneEntityCfg("robot_2")})
+        projected_gravity_2 = ObsTerm(
+            func=mdp.projected_gravity,
+            noise=Unoise(n_min=-0.05, n_max=0.05),
+            params={"asset_cfg": SceneEntityCfg("robot_2")}
+        )
+        velocity_commands_2 = ObsTerm(func=constant_commands)
+        joint_pos_2 = ObsTerm(func=mdp.joint_pos_rel, noise=Unoise(n_min=-0.01, n_max=0.01), params={"asset_cfg": SceneEntityCfg("robot_2")})
+        joint_vel_2 = ObsTerm(func=mdp.joint_vel_rel, noise=Unoise(n_min=-1.5, n_max=1.5), params={"asset_cfg": SceneEntityCfg("robot_2")})
+        actions_2 = ObsTerm(func=mdp.last_action)
+        height_scan_2 = ObsTerm(
+            func=mdp.height_scan,
+            params={"sensor_cfg": SceneEntityCfg("height_scanner_2")},
             noise=Unoise(n_min=-0.1, n_max=0.1),
             clip=(-1.0, 1.0),
         )
@@ -230,9 +265,21 @@ class QuadrupedEnvCfg(ManagerBasedEnvCfg):
         # self.sim.physics_material = self.scene.terrain.physics_material
         # update sensor update periods
         # we tick all the sensors based on the smallest update period (physics update period)
-        if self.scene.height_scanner is not None:
-            self.scene.height_scanner.update_period = self.decimation * self.sim.dt  # 50 Hz
+        self.scene.height_scanner_1.update_period = self.decimation * self.sim.dt  # 50 Hz
+        self.scene.height_scanner_2.update_period = self.decimation * self.sim.dt  # 50 Hz
 
+
+def clean_policy_for_multi_agent(policy:torch.tensor):
+    policy = policy.view(-1)
+    new_policy = torch.zeros(235*2)
+    new_policy[:49] = policy[:49]
+    new_policy[49:271] = policy[49+12:283]
+    new_policy[271:] = policy[283+12:]
+    return new_policy.view(2,-1)
+
+
+
+    
 
 def main():
     """Main function."""
@@ -262,6 +309,8 @@ def main():
                 print("-" * 80)
                 print("[INFO]: Resetting environment...")
             # infer action
+            # policy_cleaned = clean_policy_for_multi_agent(obs["policy"]).to(env.device)
+            # action = policy(policy_cleaned)
             action = policy(obs["policy"])
             # step env
             obs, _ = env.step(action)
