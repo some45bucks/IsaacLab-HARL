@@ -40,13 +40,13 @@ def main():
     """Random actions agent with Isaac Lab environment."""
     # create environment configuration
     env_cfg = parse_env_cfg(
-        "Isaac-Velocity-Flat-Anymal-C-Direct", 
-        device=args_cli.device, 
-        num_envs=args_cli.num_envs, 
-        use_fabric=not args_cli.disable_fabric
+        "Isaac-Piano-Movers-Flat-Anymal-C-Direct-v0", 
+        device="cuda:0", 
+        num_envs=2, 
+        use_fabric=False
     )
     # create environment
-    env = gym.make("Isaac-Velocity-Flat-Anymal-C-Direct", cfg=env_cfg)
+    env = gym.make("Isaac-Piano-Movers-Flat-Anymal-C-Direct-v0", cfg=env_cfg)
 
     # print info (this is vectorized environment)
     print(f"[INFO]: Gym observation space: {env.observation_space}")
