@@ -261,21 +261,26 @@ class AnymalCPianoMoversEnv(DirectRLEnv):
         light_cfg.func("/World/Light", light_cfg)
 
     def _pre_physics_step(self, actions: torch.Tensor):
-        self._actions = actions.clone()
-        self._processed_actions = self.cfg.action_scale * self._actions + self._robot.data.default_joint_pos
+        self.actions = []
+        self.processed_actions = []
+        for i, robot in enumerate(self.robots):
+            self.actions.append(actions[i].clone())
+            self.processed_actions.append(self.cfg.action_scale * self._actions + robot.data.default_joint_pos)
 
     def _apply_action(self):
-        for robot in self.robots:
-            robot.set_joint_position_target(self._processed_actions)
+        for i, robot in enumerate(self.robots):
+            robot.set_joint_position_target(self.processed_actions[i])
         # self._robot.set_joint_position_target(self._processed_actions)
 
     def _get_observations(self) -> dict:
-        self._previous_actions = self._actions.clone()
-        height_data = None
-        if isinstance(self.cfg, AnymalCRoughEnvCfg):
-            height_data = (
-                self._height_scanner.data.pos_w[:, 2].unsqueeze(1) - self._height_scanner.data.ray_hits_w[..., 2] - 0.5
-            ).clip(-1.0, 1.0)
+        self.previous_actions = [[] for _ in range(self.num_robots)]
+        for i, action in enumerate(self.actions):
+            self.previous_actions[i].append(action.clone())
+            height_data = None
+            if isinstance(self.cfg, AnymalCRoughEnvCfg):
+                height_data = (
+                    self.height_scanners[i].data.pos_w[:, 2].unsqueeze(1) - self.height_scanners[i].data.ray_hits_w[..., 2] - 0.5
+                ).clip(-1.0, 1.0)
         
         obs = []
         for robot in self.robots:
@@ -301,60 +306,73 @@ class AnymalCPianoMoversEnv(DirectRLEnv):
         return observations
 
     def _get_rewards(self) -> torch.Tensor:
-        # linear velocity tracking
-        lin_vel_error = torch.sum(torch.square(self._commands[:, :2] - self._robot.data.root_lin_vel_b[:, :2]), dim=1)
-        lin_vel_error_mapped = torch.exp(-lin_vel_error / 0.25)
-        # yaw rate tracking
-        yaw_rate_error = torch.square(self._commands[:, 2] - self._robot.data.root_ang_vel_b[:, 2])
-        yaw_rate_error_mapped = torch.exp(-yaw_rate_error / 0.25)
-        # z velocity tracking
-        z_vel_error = torch.square(self._robot.data.root_lin_vel_b[:, 2])
-        # angular velocity x/y
-        ang_vel_error = torch.sum(torch.square(self._robot.data.root_ang_vel_b[:, :2]), dim=1)
-        # joint torques
-        joint_torques = torch.sum(torch.square(self._robot.data.applied_torque), dim=1)
-        # joint acceleration
-        joint_accel = torch.sum(torch.square(self._robot.data.joint_acc), dim=1)
-        # action rate
-        action_rate = torch.sum(torch.square(self._actions - self._previous_actions), dim=1)
-        # feet air time
-        first_contact = self._contact_sensor.compute_first_contact(self.step_dt)[:, self._feet_ids]
-        last_air_time = self._contact_sensor.data.last_air_time[:, self._feet_ids]
-        air_time = torch.sum((last_air_time - 0.5) * first_contact, dim=1) * (
-            torch.norm(self._commands[:, :2], dim=1) > 0.1
-        )
-        # undersired contacts
-        net_contact_forces = self._contact_sensor.data.net_forces_w_history
-        is_contact = (
-            torch.max(torch.norm(net_contact_forces[:, :, self._undesired_contact_body_ids], dim=-1), dim=1)[0] > 1.0
-        )
-        contacts = torch.sum(is_contact, dim=1)
-        # flat orientation
-        flat_orientation = torch.sum(torch.square(self._robot.data.projected_gravity_b[:, :2]), dim=1)
+        reward = None
+        for i, robot in enumerate(self.robots):
+            # linear velocity tracking
+            lin_vel_error = torch.sum(torch.square(self._commands[:, :2] - robot.data.root_lin_vel_b[:, :2]), dim=1)
+            lin_vel_error_mapped = torch.exp(-lin_vel_error / 0.25)
+            # yaw rate tracking
+            yaw_rate_error = torch.square(self._commands[:, 2] - robot.data.root_ang_vel_b[:, 2])
+            yaw_rate_error_mapped = torch.exp(-yaw_rate_error / 0.25)
+            # z velocity tracking
+            z_vel_error = torch.square(robot.data.root_lin_vel_b[:, 2])
+            # angular velocity x/y
+            ang_vel_error = torch.sum(torch.square(robot.data.root_ang_vel_b[:, :2]), dim=1)
+            # joint torques
+            joint_torques = torch.sum(torch.square(robot.data.applied_torque), dim=1)
+            # joint acceleration
+            joint_accel = torch.sum(torch.square(robot.data.joint_acc), dim=1)
+            # action rate
+            action_rate = torch.sum(torch.square(self._actions - self._previous_actions), dim=1)
+            # feet air time
+            first_contact = self.contact_sensors[i].compute_first_contact(self.step_dt)[:, self.feet_ids[i]]
+            last_air_time = self.contact_sensors[i].data.last_air_time[:, self.feet_ids[i]]
+            air_time = torch.sum((last_air_time - 0.5) * first_contact, dim=1) * (
+                torch.norm(self._commands[:, :2], dim=1) > 0.1
+            )
+            # undersired contacts
+            net_contact_forces = self.contact_sensors[i].data.net_forces_w_history
+            is_contact = (
+                torch.max(torch.norm(net_contact_forces[:, :, self.undesired_body_contact_ids[i]], dim=-1), dim=1)[0] > 1.0
+            )
+            contacts = torch.sum(is_contact, dim=1)
+            # flat orientation
+            flat_orientation = torch.sum(torch.square(robot.data.projected_gravity_b[:, :2]), dim=1)
 
-        rewards = {
-            "track_lin_vel_xy_exp": lin_vel_error_mapped * self.cfg.lin_vel_reward_scale * self.step_dt,
-            "track_ang_vel_z_exp": yaw_rate_error_mapped * self.cfg.yaw_rate_reward_scale * self.step_dt,
-            "lin_vel_z_l2": z_vel_error * self.cfg.z_vel_reward_scale * self.step_dt,
-            "ang_vel_xy_l2": ang_vel_error * self.cfg.ang_vel_reward_scale * self.step_dt,
-            "dof_torques_l2": joint_torques * self.cfg.joint_torque_reward_scale * self.step_dt,
-            "dof_acc_l2": joint_accel * self.cfg.joint_accel_reward_scale * self.step_dt,
-            "action_rate_l2": action_rate * self.cfg.action_rate_reward_scale * self.step_dt,
-            "feet_air_time": air_time * self.cfg.feet_air_time_reward_scale * self.step_dt,
-            "undesired_contacts": contacts * self.cfg.undersired_contact_reward_scale * self.step_dt,
-            "flat_orientation_l2": flat_orientation * self.cfg.flat_orientation_reward_scale * self.step_dt,
-        }
-        reward = torch.sum(torch.stack(list(rewards.values())), dim=0)
+            rewards = {
+                "track_lin_vel_xy_exp": lin_vel_error_mapped * self.cfg.lin_vel_reward_scale * self.step_dt,
+                "track_ang_vel_z_exp": yaw_rate_error_mapped * self.cfg.yaw_rate_reward_scale * self.step_dt,
+                "lin_vel_z_l2": z_vel_error * self.cfg.z_vel_reward_scale * self.step_dt,
+                "ang_vel_xy_l2": ang_vel_error * self.cfg.ang_vel_reward_scale * self.step_dt,
+                "dof_torques_l2": joint_torques * self.cfg.joint_torque_reward_scale * self.step_dt,
+                "dof_acc_l2": joint_accel * self.cfg.joint_accel_reward_scale * self.step_dt,
+                "action_rate_l2": action_rate * self.cfg.action_rate_reward_scale * self.step_dt,
+                "feet_air_time": air_time * self.cfg.feet_air_time_reward_scale * self.step_dt,
+                "undesired_contacts": contacts * self.cfg.undersired_contact_reward_scale * self.step_dt,
+                "flat_orientation_l2": flat_orientation * self.cfg.flat_orientation_reward_scale * self.step_dt,
+            }
+            curr_reward = torch.sum(torch.stack(list(rewards.values())), dim=0)
+            if reward is not None:
+                reward += curr_reward
+            else:
+                reward = curr_reward
+
         # Logging
         for key, value in rewards.items():
             self._episode_sums[key] += value
         return reward
 
     def _get_dones(self) -> tuple[torch.Tensor, torch.Tensor]:
-        time_out = self.episode_length_buf >= self.max_episode_length - 1
-        net_contact_forces = self._contact_sensor.data.net_forces_w_history
-        died = torch.any(torch.max(torch.norm(net_contact_forces[:, :, self._base_id], dim=-1), dim=1)[0] > 1.0, dim=1)
-        return died, time_out
+        all_dones = []
+        all_died = []
+        for i in range(self.num_robots):
+            time_out = self.episode_length_buf >= self.max_episode_length - 1
+            net_contact_forces = self.contact_sensors[i].data.net_forces_w_history
+            died = torch.any(torch.max(torch.norm(net_contact_forces[:, :, self.base_ids[i]], dim=-1), dim=1)[0] > 1.0, dim=1)
+            all_dones.append(time_out)
+            all_died.append(died)
+        
+        return torch.any(torch.cat(all_dones), dim=0), torch.any(torch.cat(all_died), dim=0)
 
     def _reset_idx(self, env_ids: torch.Tensor | None):
         for robot in self.robots:
