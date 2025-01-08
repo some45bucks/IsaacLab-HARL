@@ -16,13 +16,13 @@ parser = argparse.ArgumentParser(description="Random agent for Isaac Lab environ
 parser.add_argument(
     "--disable_fabric", action="store_true", default=False, help="Disable fabric and use USD I/O operations."
 )
-parser.add_argument("--num_envs", type=int, default=2, help="Number of environments to simulate.")
-# parser.add_argument("--task", type=str, default=None, help="Name of the task.")
+parser.add_argument("--num_envs", type=int, default=None, help="Number of environments to simulate.")
+parser.add_argument("--task", type=str, default=None, help="Name of the task.")
 # append AppLauncher cli args
 AppLauncher.add_app_launcher_args(parser)
 # parse the arguments
 args_cli = parser.parse_args()
-
+print(args_cli)
 # launch omniverse app
 app_launcher = AppLauncher(args_cli)
 simulation_app = app_launcher.app
@@ -40,13 +40,10 @@ def main():
     """Random actions agent with Isaac Lab environment."""
     # create environment configuration
     env_cfg = parse_env_cfg(
-        "Isaac-Piano-Movers-Flat-Anymal-C-Direct-v0", 
-        device="cuda:0", 
-        num_envs=2, 
-        use_fabric=False
+        'Isaac-Piano-Movers-Flat-Anymal-C-Direct-v0', device=args_cli.device, num_envs=2, use_fabric=not args_cli.disable_fabric
     )
     # create environment
-    env = gym.make("Isaac-Piano-Movers-Flat-Anymal-C-Direct-v0", cfg=env_cfg)
+    env = gym.make('Isaac-Piano-Movers-Flat-Anymal-C-Direct-v0', cfg=env_cfg)
 
     # print info (this is vectorized environment)
     print(f"[INFO]: Gym observation space: {env.observation_space}")

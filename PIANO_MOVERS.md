@@ -44,10 +44,10 @@ This command updates the extension for Isaac Sim, ensuring your changes are prop
 
 ## Running the Registered Environment
 
-To run a script that uses the newly registered environment, you must use the NVIDIA-provided `isaaclab.sh` script. Here’s an example command for running the Piano Movers environment:
+To run a script that uses the newly registered environment, use the following.
 
 ```bash
-./isaaclab.sh -p source/isaacdev/envs/piano_movers_direct_env.py
+python source/isaacdev/envs/piano_movers_direct_env.py --task Isaac-Piano-Movers-Flat-Anymal-C-Direct-v0 --num_envs 2
 ```
 
 Replace `piano_movers_direct_env.py` with the path to your environment script.
