@@ -131,7 +131,7 @@ class AnymalCFlatEnvCfg(DirectRLEnvCfg):
         prim_path="/World/envs/env_.*/Robot_1/.*", history_length=3, update_period=0.005, track_air_time=True
     )
     robot_1.init_state.rot = (1.0, 0.0, 0.0, 1.0)
-    robot_1.init_state.pos = (0.0, 1.0, 0.5)
+    robot_1.init_state.pos = (2.0, 0.0, 0.5)
 
     # reward scales
     lin_vel_reward_scale = 1.0
@@ -322,7 +322,7 @@ class AnymalCPianoMoversEnv(DirectRLEnv):
             # joint acceleration
             joint_accel = torch.sum(torch.square(robot.data.joint_acc), dim=1)
             # action rate            
-            action_rate = torch.sum(torch.square(self.actions[i] - self.previous_actions[i]), dim=1)
+            action_rate = torch.sum(torch.square(self.actions[i] - self.previous_actions[i]).view(1,-1), dim=1)
             # feet air time
             first_contact = self.contact_sensors[i].compute_first_contact(self.step_dt)[:, self.feet_ids[i]]
             last_air_time = self.contact_sensors[i].data.last_air_time[:, self.feet_ids[i]]
