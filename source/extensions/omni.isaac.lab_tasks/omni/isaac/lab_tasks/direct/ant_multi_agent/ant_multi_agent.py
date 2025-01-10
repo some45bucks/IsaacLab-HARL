@@ -78,7 +78,7 @@ class EventCfg:
 
 
 @configclass
-class AnymalCMultiAgentFlatEnvCfg(DirectRLEnvCfg):
+class AntMultiAgentFlatEnvCfg(DirectRLEnvCfg):
     # env
     episode_length_s = 20.0
     decimation = 4
@@ -120,50 +120,11 @@ class AnymalCMultiAgentFlatEnvCfg(DirectRLEnvCfg):
     # events
     events: EventCfg = EventCfg()
 
-    # robot
-    robot_0: ArticulationCfg = ANYMAL_C_CFG.replace(prim_path="/World/envs/env_.*/Robot_0")
-    contact_sensor_0: ContactSensorCfg = ContactSensorCfg(
-        prim_path="/World/envs/env_.*/Robot_0/.*", history_length=3, update_period=0.005, track_air_time=True
-    )
-    robot_0.init_state.rot = (1.0, 0.0, 0.0, 1.0)
-    robot_0.init_state.pos = (-1.0, 0.0, 0.5)
 
-
-    robot_1: ArticulationCfg = ANYMAL_C_CFG.replace(prim_path="/World/envs/env_.*/Robot_1")
-    contact_sensor_1: ContactSensorCfg = ContactSensorCfg(
-        prim_path="/World/envs/env_.*/Robot_1/.*", history_length=3, update_period=0.005, track_air_time=True
-    )
-    robot_1.init_state.rot = (1.0, 0.0, 0.0, 1.0)
-    robot_1.init_state.pos = (1.0, 0.0, 0.5)
-
-    # rec prism
-    cfg_rec_prism= RigidObjectCfg(
-        prim_path="/World/envs/env_.*/Object",
-        spawn=sim_utils.CuboidCfg( 
-            size=(5,.1,.1),
-            rigid_props=sim_utils.RigidBodyPropertiesCfg(),
-            mass_props=sim_utils.MassPropertiesCfg(mass=1.0),
-            collision_props=sim_utils.CollisionPropertiesCfg(),
-            visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(0.0, 1.0, 0.0))
-        ),
-        init_state=RigidObjectCfg.InitialStateCfg(pos=(0.0, 0, 1.0), rot=(1.0, 0.0, 0.0, 0.0)),
-    )
-
-    # reward scales
-    lin_vel_reward_scale = 1.0
-    yaw_rate_reward_scale = 0.5
-    z_vel_reward_scale = -2.0
-    ang_vel_reward_scale = -0.05
-    joint_torque_reward_scale = -2.5e-5
-    joint_accel_reward_scale = -2.5e-7
-    action_rate_reward_scale = -0.01
-    feet_air_time_reward_scale = 0.5
-    undersired_contact_reward_scale = -1.0
-    flat_orientation_reward_scale = -5.0
 
 
 @configclass
-class AnymalCMultiAgentRoughEnvCfg(AnymalCMultiAgentFlatEnvCfg):
+class AntMultiAgentRoughEnvCfg(AntMultiAgentFlatEnvCfg):
     # env
     observation_space = 235
 
@@ -210,9 +171,9 @@ class AnymalCMultiAgentRoughEnvCfg(AnymalCMultiAgentFlatEnvCfg):
 
 
 class AnymalCMultiAgent(DirectRLEnv):
-    cfg: AnymalCMultiAgentFlatEnvCfg | AnymalCMultiAgentRoughEnvCfg
+    cfg: AntMultiAgentFlatEnvCfg | AntMultiAgentRoughEnvCfg
 
-    def __init__(self, cfg: AnymalCMultiAgentFlatEnvCfg | AnymalCMultiAgentRoughEnvCfg, render_mode: str | None = None, **kwargs):
+    def __init__(self, cfg: AntMultiAgentFlatEnvCfg | AntMultiAgentRoughEnvCfg, render_mode: str | None = None, **kwargs):
         super().__init__(cfg, render_mode, **kwargs)
         # Joint position command (deviation from default joint positions)
         self.actions = torch.zeros(self.num_envs*self.num_robots, gym.spaces.flatdim(self.single_action_space), device=self.device)
@@ -266,7 +227,7 @@ class AnymalCMultiAgent(DirectRLEnv):
             self.scene.articulations[f"robot_{i}"] = self.robots[i]
             self.contact_sensors.append(ContactSensor(self.cfg.__dict__["contact_sensor_" + str(i)]))
             self.scene.sensors[f"contact_sensor_{i}"] = self.contact_sensors[i]
-            if isinstance(self.cfg, AnymalCMultiAgentRoughEnvCfg):
+            if isinstance(self.cfg, AntMultiAgentRoughEnvCfg):
                 # we add a height scanner for perceptive locomotion
                 self.height_scanners.append(RayCaster(self.cfg.height_scanner))
                 self.scene.sensors[f"height_scanner_{i}"] = self.height_scanners[i]
@@ -298,7 +259,7 @@ class AnymalCMultiAgent(DirectRLEnv):
         self.previous_actions = self.actions.clone()
         for i in range(self.num_robots):
             height_data = None
-            if isinstance(self.cfg, AnymalCMultiAgentRoughEnvCfg):
+            if isinstance(self.cfg, AntMultiAgentRoughEnvCfg):
                 height_data = (
                     self.height_scanners[i].data.pos_w[:, 2].unsqueeze(1) - self.height_scanners[i].data.ray_hits_w[..., 2] - 0.5
                 ).clip(-1.0, 1.0)
