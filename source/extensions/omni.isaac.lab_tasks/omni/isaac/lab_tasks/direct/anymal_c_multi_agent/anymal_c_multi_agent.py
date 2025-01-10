@@ -284,11 +284,10 @@ class AnymalCMultiAgent(DirectRLEnv):
     def _pre_physics_step(self, actions: torch.Tensor):
         # We need to process the actions for each scene independently
         self.processed_actions = torch.zeros_like(actions)
-        env_iters = torch.arange(0, self.num_robots*self.num_envs, self.num_robots)
         for i, robot in enumerate(self.robots):
-            curr_robots = slice(env_iters[i], env_iters[i] + self.num_robots)
-            self.actions[curr_robots] = actions[curr_robots].clone()
-            self.processed_actions[curr_robots] = self.cfg.action_scale * self.actions[curr_robots] + robot.data.default_joint_pos
+            curr_robot = slice(self.num_envs * i, self.num_envs * (i + 1))
+            self.actions[curr_robot] = actions[curr_robot].clone()
+            self.processed_actions[curr_robot] = self.cfg.action_scale * self.actions[curr_robot] + robot.data.default_joint_pos
 
     def _apply_action(self):
         for i, robot in enumerate(self.robots):
@@ -306,6 +305,7 @@ class AnymalCMultiAgent(DirectRLEnv):
         
         obs = []
         for i, robot in enumerate(self.robots):
+            curr_robot = slice(self.num_envs * i, self.num_envs * (i + 1))
             obs.append(torch.cat(
             [
                 tensor
@@ -317,7 +317,7 @@ class AnymalCMultiAgent(DirectRLEnv):
                     robot.data.joint_pos - robot.data.default_joint_pos,
                     robot.data.joint_vel,
                     height_data,
-                    self.actions[i].view(self.num_robots,-1),
+                    self.actions[curr_robot],
                 )
                 if tensor is not None
             ],
@@ -368,7 +368,7 @@ class AnymalCMultiAgent(DirectRLEnv):
                 "ang_vel_xy_l2": ang_vel_error * self.cfg.ang_vel_reward_scale * self.step_dt,
                 "dof_torques_l2": joint_torques * self.cfg.joint_torque_reward_scale * self.step_dt,
                 "dof_acc_l2": joint_accel * self.cfg.joint_accel_reward_scale * self.step_dt,
-                "action_rate_l2": (action_rate * self.cfg.action_rate_reward_scale * self.step_dt).repeat(self.num_robots),
+                "action_rate_l2": (action_rate * self.cfg.action_rate_reward_scale * self.step_dt).repeat(self.num_envs),
                 "feet_air_time": air_time * self.cfg.feet_air_time_reward_scale * self.step_dt,
                 "undesired_contacts": contacts * self.cfg.undersired_contact_reward_scale * self.step_dt,
                 "flat_orientation_l2": flat_orientation * self.cfg.flat_orientation_reward_scale * self.step_dt,
@@ -404,7 +404,7 @@ class AnymalCMultiAgent(DirectRLEnv):
         time_out = self.episode_length_buf >= self.max_episode_length - 1
         net_contact_forces = contact_sensor.data.net_forces_w_history
         died = torch.any(torch.max(torch.norm(net_contact_forces[:, :, base_id], dim=-1), dim=1)[0] > 1.0, dim=1)
-        return died, time_out
+        return False, False
     
     def _reset_idx(self, env_ids: torch.Tensor | None):
         super()._reset_idx(env_ids)
