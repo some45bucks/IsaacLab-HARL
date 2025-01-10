@@ -407,11 +407,18 @@ class AnymalCMultiAgent(DirectRLEnv):
         return died, time_out
     
     def _reset_idx(self, env_ids: torch.Tensor | None):
+        super()._reset_idx(env_ids)
+
+        object_default_state = self.object.data.default_root_state.clone()[env_ids]
+        object_default_state[:, 0:3] = (
+            object_default_state[:, 0:3] + self.scene.env_origins[env_ids]
+        )
+        self.object.write_root_state_to_sim(object_default_state, env_ids)
+        # self.object.reset(env_ids)
         for robot in self.robots:
             if env_ids is None or len(env_ids) == self.num_envs:
                 env_ids = robot._ALL_INDICES
             robot.reset(env_ids)
-            super()._reset_idx(env_ids)
             if len(env_ids) == self.num_envs:
                 # Spread out the resets to avoid spikes in training when many environments reset at a similar time
                 self.episode_length_buf[:] = torch.randint_like(self.episode_length_buf, high=int(self.max_episode_length))
