@@ -10,7 +10,7 @@ import torch
 
 import omni.isaac.lab.envs.mdp as mdp
 import omni.isaac.lab.sim as sim_utils
-from omni.isaac.lab.assets import Articulation, ArticulationCfg, AssetBaseCfg
+from omni.isaac.lab.assets import Articulation, ArticulationCfg, AssetBase, AssetBaseCfg, RigidObject, RigidObjectCfg
 from omni.isaac.lab.envs import DirectRLEnv, DirectRLEnvCfg
 from omni.isaac.lab.managers import EventTermCfg as EventTerm
 from omni.isaac.lab.managers import SceneEntityCfg
@@ -19,6 +19,7 @@ from omni.isaac.lab.sensors import ContactSensor, ContactSensorCfg, RayCaster, R
 from omni.isaac.lab.sim import SimulationCfg
 from omni.isaac.lab.terrains import TerrainImporterCfg
 from omni.isaac.lab.utils import configclass
+from omni.isaac.lab.utils.assets import ISAAC_NUCLEUS_DIR
 
 ##
 # Pre-defined configs
@@ -77,7 +78,7 @@ class EventCfg:
 
 
 @configclass
-class AnymalCFlatEnvCfg(DirectRLEnvCfg):
+class AnymalCMultiAgentFlatEnvCfg(DirectRLEnvCfg):
     # env
     episode_length_s = 20.0
     decimation = 4
@@ -114,7 +115,7 @@ class AnymalCFlatEnvCfg(DirectRLEnvCfg):
     )
 
     # scene
-    scene: InteractiveSceneCfg = InteractiveSceneCfg(num_envs=1, env_spacing=4.0, replicate_physics=True)
+    scene: InteractiveSceneCfg = InteractiveSceneCfg(num_envs=1, env_spacing=6.0, replicate_physics=True)
 
     # events
     events: EventCfg = EventCfg()
@@ -125,17 +126,19 @@ class AnymalCFlatEnvCfg(DirectRLEnvCfg):
         prim_path="/World/envs/env_.*/Robot_0/.*", history_length=3, update_period=0.005, track_air_time=True
     )
     robot_0.init_state.rot = (1.0, 0.0, 0.0, 1.0)
+    robot_0.init_state.pos = (-1.0, 0.0, 0.5)
+
 
     robot_1: ArticulationCfg = ANYMAL_C_CFG.replace(prim_path="/World/envs/env_.*/Robot_1")
     contact_sensor_1: ContactSensorCfg = ContactSensorCfg(
         prim_path="/World/envs/env_.*/Robot_1/.*", history_length=3, update_period=0.005, track_air_time=True
     )
     robot_1.init_state.rot = (1.0, 0.0, 0.0, 1.0)
-    robot_1.init_state.pos = (2.0, 0.0, 0.5)
+    robot_1.init_state.pos = (1.0, 0.0, 0.5)
 
     # rec prism
-    cfg_rec_prism_cfg = AssetBaseCfg(
-        prim_path="/World/envs/env_.*/RecPrism",
+    cfg_rec_prism= RigidObjectCfg(
+        prim_path="/World/envs/env_.*/Object",
         spawn=sim_utils.CuboidCfg( 
             size=(5,.1,.1),
             rigid_props=sim_utils.RigidBodyPropertiesCfg(),
@@ -143,8 +146,8 @@ class AnymalCFlatEnvCfg(DirectRLEnvCfg):
             collision_props=sim_utils.CollisionPropertiesCfg(),
             visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(0.0, 1.0, 0.0))
         ),
+        init_state=RigidObjectCfg.InitialStateCfg(pos=(0.0, 0, 1.0), rot=(1.0, 0.0, 0.0, 0.0)),
     )
-    cfg_rec_prism_cfg.init_state.pos = (0.0, 0.0, 2.0)
 
     # reward scales
     lin_vel_reward_scale = 1.0
@@ -160,7 +163,7 @@ class AnymalCFlatEnvCfg(DirectRLEnvCfg):
 
 
 @configclass
-class AnymalCRoughEnvCfg(AnymalCFlatEnvCfg):
+class AnymalCMultiAgentRoughEnvCfg(AnymalCMultiAgentFlatEnvCfg):
     # env
     observation_space = 235
 
@@ -207,9 +210,9 @@ class AnymalCRoughEnvCfg(AnymalCFlatEnvCfg):
 
 
 class AnymalCMultiAgent(DirectRLEnv):
-    cfg: AnymalCFlatEnvCfg | AnymalCRoughEnvCfg
+    cfg: AnymalCMultiAgentFlatEnvCfg | AnymalCMultiAgentRoughEnvCfg
 
-    def __init__(self, cfg: AnymalCFlatEnvCfg | AnymalCRoughEnvCfg, render_mode: str | None = None, **kwargs):
+    def __init__(self, cfg: AnymalCMultiAgentFlatEnvCfg | AnymalCMultiAgentRoughEnvCfg, render_mode: str | None = None, **kwargs):
         super().__init__(cfg, render_mode, **kwargs)
         # Joint position command (deviation from default joint positions)
         self.actions = torch.zeros(self.num_envs*self.num_robots, gym.spaces.flatdim(self.single_action_space), device=self.device)
@@ -254,12 +257,16 @@ class AnymalCMultiAgent(DirectRLEnv):
         self.robots = []
         self.contact_sensors = []
         self.height_scanners = []
+        self.object = RigidObject(self.cfg.cfg_rec_prism)
+        
+        self.scene.rigid_objects["object"] = self.object
+
         for i in range(self.num_robots):
             self.robots.append(Articulation(self.cfg.__dict__["robot_" + str(i)]))
             self.scene.articulations[f"robot_{i}"] = self.robots[i]
             self.contact_sensors.append(ContactSensor(self.cfg.__dict__["contact_sensor_" + str(i)]))
             self.scene.sensors[f"contact_sensor_{i}"] = self.contact_sensors[i]
-            if isinstance(self.cfg, AnymalCRoughEnvCfg):
+            if isinstance(self.cfg, AnymalCMultiAgentRoughEnvCfg):
                 # we add a height scanner for perceptive locomotion
                 self.height_scanners.append(RayCaster(self.cfg.height_scanner))
                 self.scene.sensors[f"height_scanner_{i}"] = self.height_scanners[i]
@@ -292,7 +299,7 @@ class AnymalCMultiAgent(DirectRLEnv):
         self.previous_actions = self.actions.clone()
         for i in range(self.num_robots):
             height_data = None
-            if isinstance(self.cfg, AnymalCRoughEnvCfg):
+            if isinstance(self.cfg, AnymalCMultiAgentRoughEnvCfg):
                 height_data = (
                     self.height_scanners[i].data.pos_w[:, 2].unsqueeze(1) - self.height_scanners[i].data.ray_hits_w[..., 2] - 0.5
                 ).clip(-1.0, 1.0)
@@ -389,6 +396,7 @@ class AnymalCMultiAgent(DirectRLEnv):
         
     #     return torch.any(torch.cat(all_dones), dim=0), torch.any(torch.cat(all_died), dim=0)
 
+    #TODO: Implement a dones function that handles multiple robots 
     def _get_dones(self) -> tuple[torch.Tensor, torch.Tensor]:
         contact_sensor = self.contact_sensors[0]
         base_id = self.base_ids[0]
