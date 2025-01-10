@@ -348,7 +348,7 @@ class AnymalCMultiAgent(DirectRLEnv):
                 "ang_vel_xy_l2": ang_vel_error * self.cfg.ang_vel_reward_scale * self.step_dt,
                 "dof_torques_l2": joint_torques * self.cfg.joint_torque_reward_scale * self.step_dt,
                 "dof_acc_l2": joint_accel * self.cfg.joint_accel_reward_scale * self.step_dt,
-                "action_rate_l2": action_rate * self.cfg.action_rate_reward_scale * self.step_dt,
+                "action_rate_l2": (action_rate * self.cfg.action_rate_reward_scale * self.step_dt).repeat(self.num_robots),
                 "feet_air_time": air_time * self.cfg.feet_air_time_reward_scale * self.step_dt,
                 "undesired_contacts": contacts * self.cfg.undersired_contact_reward_scale * self.step_dt,
                 "flat_orientation_l2": flat_orientation * self.cfg.flat_orientation_reward_scale * self.step_dt,
