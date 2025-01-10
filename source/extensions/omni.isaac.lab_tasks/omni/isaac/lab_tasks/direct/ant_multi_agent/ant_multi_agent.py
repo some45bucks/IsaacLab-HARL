@@ -26,87 +26,77 @@ from omni.isaac.lab.utils.assets import ISAAC_NUCLEUS_DIR
 ##
 from omni.isaac.lab_assets.anymal import ANYMAL_C_CFG  # isort: skip
 from omni.isaac.lab.terrains.config.rough import ROUGH_TERRAINS_CFG  # isort: skip
+from omni.isaac.lab_assets.ant import ANT_CFG
 
 
-@configclass
-class EventCfg:
-    """Configuration for randomization."""
+# @configclass
+# class EventCfg:
+#     """Configuration for randomization."""
 
-    physics_material_0 = EventTerm(
-        func=mdp.randomize_rigid_body_material,
-        mode="startup",
-        params={
-            "asset_cfg": SceneEntityCfg("robot_0", body_names=".*"),
-            "static_friction_range": (0.8, 0.8),
-            "dynamic_friction_range": (0.6, 0.6),
-            "restitution_range": (0.0, 0.0),
-            "num_buckets": 64,
-        },
-    )
+#     physics_material_0 = EventTerm(
+#         func=mdp.randomize_rigid_body_material,
+#         mode="startup",
+#         params={
+#             "asset_cfg": SceneEntityCfg("robot_0", body_names=".*"),
+#             "static_friction_range": (0.8, 0.8),
+#             "dynamic_friction_range": (0.6, 0.6),
+#             "restitution_range": (0.0, 0.0),
+#             "num_buckets": 64,
+#         },
+#     )
 
-    physics_material_1 = EventTerm(
-        func=mdp.randomize_rigid_body_material,
-        mode="startup",
-        params={
-            "asset_cfg": SceneEntityCfg("robot_1", body_names=".*"),
-            "static_friction_range": (0.8, 0.8),
-            "dynamic_friction_range": (0.6, 0.6),
-            "restitution_range": (0.0, 0.0),
-            "num_buckets": 64,
-        },
-    )
+#     physics_material_1 = EventTerm(
+#         func=mdp.randomize_rigid_body_material,
+#         mode="startup",
+#         params={
+#             "asset_cfg": SceneEntityCfg("robot_1", body_names=".*"),
+#             "static_friction_range": (0.8, 0.8),
+#             "dynamic_friction_range": (0.6, 0.6),
+#             "restitution_range": (0.0, 0.0),
+#             "num_buckets": 64,
+#         },
+#     )
 
-    add_base_mass_0 = EventTerm(
-        func=mdp.randomize_rigid_body_mass,
-        mode="startup",
-        params={
-            "asset_cfg": SceneEntityCfg("robot_0", body_names="base"),
-            "mass_distribution_params": (-5.0, 5.0),
-            "operation": "add",
-        },
-    )
+#     add_base_mass_0 = EventTerm(
+#         func=mdp.randomize_rigid_body_mass,
+#         mode="startup",
+#         params={
+#             "asset_cfg": SceneEntityCfg("robot_0", body_names="base"),
+#             "mass_distribution_params": (-5.0, 5.0),
+#             "operation": "add",
+#         },
+#     )
 
-    add_base_mass_1 = EventTerm(
-        func=mdp.randomize_rigid_body_mass,
-        mode="startup",
-        params={
-            "asset_cfg": SceneEntityCfg("robot_1", body_names="base"),
-            "mass_distribution_params": (-5.0, 5.0),
-            "operation": "add",
-        },
-    )
+#     add_base_mass_1 = EventTerm(
+#         func=mdp.randomize_rigid_body_mass,
+#         mode="startup",
+#         params={
+#             "asset_cfg": SceneEntityCfg("robot_1", body_names="base"),
+#             "mass_distribution_params": (-5.0, 5.0),
+#             "operation": "add",
+#         },
+#     )
 
 
 @configclass
 class AntMultiAgentFlatEnvCfg(DirectRLEnvCfg):
     # env
-    episode_length_s = 20.0
-    decimation = 4
+    episode_length_s = 15.0
+    decimation = 2
     action_scale = 0.5
-    action_space = 12
-    observation_space = 48
+    action_space = 8
+    observation_space = 36
     state_space = 0
 
     # simulation
-    sim: SimulationCfg = SimulationCfg(
-        dt=1 / 200,
-        render_interval=decimation,
-        disable_contact_processing=True,
-        physics_material=sim_utils.RigidBodyMaterialCfg(
-            friction_combine_mode="multiply",
-            restitution_combine_mode="multiply",
-            static_friction=1.0,
-            dynamic_friction=1.0,
-            restitution=0.0,
-        ),
-    )
+    sim: SimulationCfg = SimulationCfg(dt=1 / 120, render_interval=decimation)
     terrain = TerrainImporterCfg(
         prim_path="/World/ground",
         terrain_type="plane",
         collision_group=-1,
         physics_material=sim_utils.RigidBodyMaterialCfg(
-            friction_combine_mode="multiply",
-            restitution_combine_mode="multiply",
+            friction_combine_mode="average",
+            restitution_combine_mode="average",
             static_friction=1.0,
             dynamic_friction=1.0,
             restitution=0.0,
@@ -115,65 +105,80 @@ class AntMultiAgentFlatEnvCfg(DirectRLEnvCfg):
     )
 
     # scene
-    scene: InteractiveSceneCfg = InteractiveSceneCfg(num_envs=1, env_spacing=6.0, replicate_physics=True)
+    scene: InteractiveSceneCfg = InteractiveSceneCfg(num_envs=4096, env_spacing=4.0, replicate_physics=True)
 
-    # events
-    events: EventCfg = EventCfg()
+    # robot
+    robot: ArticulationCfg = ANT_CFG.replace(prim_path="/World/envs/env_.*/Robot")
+    joint_gears: list = [15, 15, 15, 15, 15, 15, 15, 15]
+
+    heading_weight: float = 0.5
+    up_weight: float = 0.1
+
+    energy_cost_scale: float = 0.05
+    actions_cost_scale: float = 0.005
+    alive_reward_scale: float = 0.5
+    dof_vel_scale: float = 0.2
+
+    death_cost: float = -2.0
+    termination_height: float = 0.31
+
+    angular_velocity_scale: float = 1.0
+    contact_force_scale: float = 0.1
 
 
 
 
-@configclass
-class AntMultiAgentRoughEnvCfg(AntMultiAgentFlatEnvCfg):
-    # env
-    observation_space = 235
+# @configclass
+# class AntMultiAgentRoughEnvCfg(AntMultiAgentFlatEnvCfg):
+#     # env
+#     observation_space = 235
 
-    terrain = TerrainImporterCfg(
-        prim_path="/World/ground",
-        terrain_type="generator",
-        terrain_generator=ROUGH_TERRAINS_CFG,
-        max_init_terrain_level=9,
-        collision_group=-1,
-        physics_material=sim_utils.RigidBodyMaterialCfg(
-            friction_combine_mode="multiply",
-            restitution_combine_mode="multiply",
-            static_friction=1.0,
-            dynamic_friction=1.0,
-        ),
-        visual_material=sim_utils.MdlFileCfg(
-            mdl_path="{NVIDIA_NUCLEUS_DIR}/Materials/Base/Architecture/Shingles_01.mdl",
-            project_uvw=True,
-        ),
-        debug_vis=False,
-    )
+#     terrain = TerrainImporterCfg(
+#         prim_path="/World/ground",
+#         terrain_type="generator",
+#         terrain_generator=ROUGH_TERRAINS_CFG,
+#         max_init_terrain_level=9,
+#         collision_group=-1,
+#         physics_material=sim_utils.RigidBodyMaterialCfg(
+#             friction_combine_mode="multiply",
+#             restitution_combine_mode="multiply",
+#             static_friction=1.0,
+#             dynamic_friction=1.0,
+#         ),
+#         visual_material=sim_utils.MdlFileCfg(
+#             mdl_path="{NVIDIA_NUCLEUS_DIR}/Materials/Base/Architecture/Shingles_01.mdl",
+#             project_uvw=True,
+#         ),
+#         debug_vis=False,
+#     )
 
-    # we add a height scanner for perceptive locomotion
-    height_scanner_1 = RayCasterCfg(
-        prim_path="/World/envs/env_.*/Robot_0/base",
-        offset=RayCasterCfg.OffsetCfg(pos=(0.0, 0.0, 20.0)),
-        attach_yaw_only=True,
-        pattern_cfg=patterns.GridPatternCfg(resolution=0.1, size=[1.6, 1.0]),
-        debug_vis=False,
-        mesh_prim_paths=["/World/ground"],
-    )
+#     # we add a height scanner for perceptive locomotion
+#     height_scanner_1 = RayCasterCfg(
+#         prim_path="/World/envs/env_.*/Robot_0/base",
+#         offset=RayCasterCfg.OffsetCfg(pos=(0.0, 0.0, 20.0)),
+#         attach_yaw_only=True,
+#         pattern_cfg=patterns.GridPatternCfg(resolution=0.1, size=[1.6, 1.0]),
+#         debug_vis=False,
+#         mesh_prim_paths=["/World/ground"],
+#     )
 
-    height_scanner_2 = RayCasterCfg(
-        prim_path="/World/envs/env_.*/Robot_1/base",
-        offset=RayCasterCfg.OffsetCfg(pos=(0.0, 0.0, 20.0)),
-        attach_yaw_only=True,
-        pattern_cfg=patterns.GridPatternCfg(resolution=0.1, size=[1.6, 1.0]),
-        debug_vis=False,
-        mesh_prim_paths=["/World/ground"],
-    )
+#     height_scanner_2 = RayCasterCfg(
+#         prim_path="/World/envs/env_.*/Robot_1/base",
+#         offset=RayCasterCfg.OffsetCfg(pos=(0.0, 0.0, 20.0)),
+#         attach_yaw_only=True,
+#         pattern_cfg=patterns.GridPatternCfg(resolution=0.1, size=[1.6, 1.0]),
+#         debug_vis=False,
+#         mesh_prim_paths=["/World/ground"],
+#     )
 
-    # reward scales (override from flat config)
-    flat_orientation_reward_scale = 0.0
+#     # reward scales (override from flat config)
+#     flat_orientation_reward_scale = 0.0
 
 
 class AnymalCMultiAgent(DirectRLEnv):
-    cfg: AntMultiAgentFlatEnvCfg | AntMultiAgentRoughEnvCfg
+    cfg: AntMultiAgentFlatEnvCfg
 
-    def __init__(self, cfg: AntMultiAgentFlatEnvCfg | AntMultiAgentRoughEnvCfg, render_mode: str | None = None, **kwargs):
+    def __init__(self, cfg: AntMultiAgentFlatEnvCfg, render_mode: str | None = None, **kwargs):
         super().__init__(cfg, render_mode, **kwargs)
         # Joint position command (deviation from default joint positions)
         self.actions = torch.zeros(self.num_envs*self.num_robots, gym.spaces.flatdim(self.single_action_space), device=self.device)
