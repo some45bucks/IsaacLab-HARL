@@ -10,7 +10,7 @@ import torch
 
 import omni.isaac.lab.envs.mdp as mdp
 import omni.isaac.lab.sim as sim_utils
-from omni.isaac.lab.assets import Articulation, ArticulationCfg
+from omni.isaac.lab.assets import Articulation, ArticulationCfg, AssetBaseCfg
 from omni.isaac.lab.envs import DirectRLEnv, DirectRLEnvCfg
 from omni.isaac.lab.managers import EventTermCfg as EventTerm
 from omni.isaac.lab.managers import SceneEntityCfg
@@ -132,6 +132,19 @@ class AnymalCFlatEnvCfg(DirectRLEnvCfg):
     )
     robot_1.init_state.rot = (1.0, 0.0, 0.0, 1.0)
     robot_1.init_state.pos = (2.0, 0.0, 0.5)
+
+    # rec prism
+    cfg_rec_prism_cfg = AssetBaseCfg(
+        prim_path="/World/envs/env_.*/RecPrism",
+        spawn=sim_utils.CuboidCfg( 
+            size=(5,.1,.1),
+            rigid_props=sim_utils.RigidBodyPropertiesCfg(),
+            mass_props=sim_utils.MassPropertiesCfg(mass=1.0),
+            collision_props=sim_utils.CollisionPropertiesCfg(),
+            visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(0.0, 1.0, 0.0))
+        ),
+    )
+    cfg_rec_prism_cfg.init_state.pos = (0.0, 0.0, 2.0)
 
     # reward scales
     lin_vel_reward_scale = 1.0
