@@ -262,10 +262,13 @@ class AnymalCMultiAgent(DirectRLEnv):
         light_cfg.func("/World/Light", light_cfg)
 
     def _pre_physics_step(self, actions: torch.Tensor):
+        # We need to process the actions for each scene independently
         self.processed_actions = torch.zeros_like(actions)
+        env_iters = torch.arange(0, self.num_robots*self.num_envs, self.num_robots)
         for i, robot in enumerate(self.robots):
-            self.actions[i] = actions[i].clone()
-            self.processed_actions[i] = self.cfg.action_scale * self.actions[i] + robot.data.default_joint_pos
+            curr_robots = slice(env_iters[i], env_iters[i] + self.num_robots)
+            self.actions[curr_robots] = actions[curr_robots].clone()
+            self.processed_actions[curr_robots] = self.cfg.action_scale * self.actions[curr_robots] + robot.data.default_joint_pos
 
     def _apply_action(self):
         for i, robot in enumerate(self.robots):
@@ -294,7 +297,7 @@ class AnymalCMultiAgent(DirectRLEnv):
                     robot.data.joint_pos - robot.data.default_joint_pos,
                     robot.data.joint_vel,
                     height_data,
-                    self.actions[i].view(1,-1),
+                    self.actions[i].view(self.num_robots,-1),
                 )
                 if tensor is not None
             ],
