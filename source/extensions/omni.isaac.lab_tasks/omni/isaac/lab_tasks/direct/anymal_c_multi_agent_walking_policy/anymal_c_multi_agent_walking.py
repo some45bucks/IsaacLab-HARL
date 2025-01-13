@@ -81,7 +81,7 @@ class EventCfg:
 
 
 @configclass
-class AnymalCMultiAgentFlatEnvCfg(DirectRLEnvCfg):
+class AnymalCMultiAgentWalkingFlatEnvCfg(DirectRLEnvCfg):
     # env
     episode_length_s = 20.0
     decimation = 4
@@ -189,7 +189,7 @@ class AnymalCMultiAgentFlatEnvCfg(DirectRLEnvCfg):
 
 
 @configclass
-class AnymalCMultiAgentRoughEnvCfg(AnymalCMultiAgentFlatEnvCfg):
+class AnymalCMultiAgentWalkingRoughEnvCfg(AnymalCMultiAgentWalkingFlatEnvCfg):
     # env
     observation_space = 235
 
@@ -272,11 +272,11 @@ class ObservationsCfg:
     policy: PolicyCfg = PolicyCfg()
 
 class AnymalCMultiAgent(DirectRLEnv):
-    cfg: AnymalCMultiAgentFlatEnvCfg | AnymalCMultiAgentRoughEnvCfg
+    cfg: AnymalCMultiAgentWalkingFlatEnvCfg | AnymalCMultiAgentWalkingRoughEnvCfg
 
     observations: ObservationsCfg = ObservationsCfg()
 
-    def __init__(self, cfg: AnymalCMultiAgentFlatEnvCfg | AnymalCMultiAgentRoughEnvCfg, render_mode: str | None = None, **kwargs):
+    def __init__(self, cfg: AnymalCMultiAgentWalkingFlatEnvCfg | AnymalCMultiAgentWalkingRoughEnvCfg, render_mode: str | None = None, **kwargs):
         super().__init__(cfg, render_mode, **kwargs)
         # Joint position command (deviation from default joint positions)
         self.actions = torch.zeros(self.num_envs*self.num_robots, gym.spaces.flatdim(self.single_action_space), device=self.device)
@@ -331,7 +331,7 @@ class AnymalCMultiAgent(DirectRLEnv):
             self.scene.articulations[f"robot_{i}"] = self.robots[i]
             self.contact_sensors.append(ContactSensor(self.cfg.__dict__["contact_sensor_" + str(i)]))
             self.scene.sensors[f"contact_sensor_{i}"] = self.contact_sensors[i]
-            # if isinstance(self.cfg, AnymalCMultiAgentRoughEnvCfg):
+            # if isinstance(self.cfg, AnymalCMultiAgentWalkingRoughEnvCfg):
                 # we add a height scanner for perceptive locomotion
             self.height_scanners.append(RayCaster(self.cfg.__dict__["height_scanner_" + str(i)]))
             self.scene.sensors[f"height_scanner_{i}"] = self.height_scanners[i]
@@ -363,7 +363,7 @@ class AnymalCMultiAgent(DirectRLEnv):
         self.previous_actions = self.actions.clone()
         for i in range(self.num_robots):
             height_data = None
-            # if isinstance(self.cfg, AnymalCMultiAgentRoughEnvCfg):
+            # if isinstance(self.cfg, AnymalCMultiAgentWalkingRoughEnvCfg):
             height_data = (
                 self.height_scanners[i].data.pos_w[:, 2].unsqueeze(1) - self.height_scanners[i].data.ray_hits_w[..., 2] - 0.5
             ).clip(-1.0, 1.0)
