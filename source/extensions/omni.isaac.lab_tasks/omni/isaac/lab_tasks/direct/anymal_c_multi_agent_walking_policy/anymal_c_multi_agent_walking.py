@@ -297,6 +297,7 @@ class AnymalCMultiAgentWalking(DirectRLEnv):
         self.robots = []
         self.contact_sensors = []
         self.height_scanners = []
+
         # self.object = RigidObject(self.cfg.cfg_rec_prism)
         
         # self.scene.rigid_objects["object"] = self.object
