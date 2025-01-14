@@ -11,7 +11,7 @@ import torch
 import omni.isaac.lab.envs.mdp as mdp
 import omni.isaac.lab.sim as sim_utils
 from omni.isaac.lab.assets import Articulation, ArticulationCfg, AssetBase, AssetBaseCfg, RigidObject, RigidObjectCfg
-from omni.isaac.lab.envs import DirectRLEnv, DirectRLEnvCfg
+from omni.isaac.lab.envs import DirectRLEnv, DirectRLEnvCfg, DirectMARLEnv, DirectMARLEnvCfg
 from omni.isaac.lab.managers import EventTermCfg as EventTerm
 from omni.isaac.lab.managers import SceneEntityCfg
 from omni.isaac.lab.scene import InteractiveSceneCfg
@@ -78,15 +78,19 @@ class EventCfg:
 
 
 @configclass
-class AnymalCMultiAgentFlatEnvCfg(DirectRLEnvCfg):
+class AnymalCMultiAgentFlatEnvCfg(DirectMARLEnvCfg):
     # env
     episode_length_s = 20.0
     decimation = 4
     action_scale = 0.5
     action_space = 12
+    action_spaces = {f"robot_{i}": 12 for i in range(2)}
     # observation_space = 48
     observation_space = 235
+    observation_spaces = {f"robot_{i}": 235 for i in range(2)}
     state_space = 0
+    state_spaces = {f"robot_{i}": 0 for i in range(2)}
+    possible_agents = ["robot_0", "robot_1"]
 
     # simulation
     sim: SimulationCfg = SimulationCfg(
@@ -232,15 +236,15 @@ class AnymalCMultiAgentRoughEnvCfg(AnymalCMultiAgentFlatEnvCfg):
     flat_orientation_reward_scale = 0.0
 
 
-class AnymalCMultiAgent(DirectRLEnv):
+class AnymalCMultiAgent(DirectMARLEnv):
     cfg: AnymalCMultiAgentFlatEnvCfg | AnymalCMultiAgentRoughEnvCfg
 
     def __init__(self, cfg: AnymalCMultiAgentFlatEnvCfg | AnymalCMultiAgentRoughEnvCfg, render_mode: str | None = None, **kwargs):
         super().__init__(cfg, render_mode, **kwargs)
         # Joint position command (deviation from default joint positions)
-        self.actions = torch.zeros(self.num_envs*self.num_robots, gym.spaces.flatdim(self.single_action_space), device=self.device)
+        self.actions = torch.zeros(self.num_envs*self.num_robots, gym.spaces.flatdim(self.action_space("robot_0")), device=self.device)
         self.previous_actions = torch.zeros(
-            self.num_envs*self.num_robots, gym.spaces.flatdim(self.single_action_space), device=self.device
+            self.num_envs*self.num_robots, gym.spaces.flatdim(self.action_space("robot_0")), device=self.device
         )
 
         # X/Y linear velocity and yaw angular velocity commands
@@ -330,10 +334,10 @@ class AnymalCMultiAgent(DirectRLEnv):
             height_datas.append(height_data)
 
         
-        obs = []
+        obs = {}
         for i, robot in enumerate(self.robots):
             curr_robot = slice(self.num_envs * i, self.num_envs * (i + 1))
-            obs.append(torch.cat(
+            obs["robot_" + str(i)] = (torch.cat(
             [
                 tensor
                 for tensor in (
@@ -350,9 +354,9 @@ class AnymalCMultiAgent(DirectRLEnv):
             ],
             dim=-1,
             ))
-        obs = torch.cat(obs, dim=0)
-        observations = {"policy": obs}
-        return observations
+        # obs = torch.cat(obs, dim=0)
+        # observations = {"policy": obs}
+        return obs
 
     def _get_rewards(self) -> torch.Tensor:
         reward = None
@@ -471,6 +475,7 @@ class AnymalCMultiAgent(DirectRLEnv):
             self.extras["log"] = dict()
             self.extras["log"].update(extras)
             extras = dict()
-            extras["Episode_Termination/base_contact"] = torch.count_nonzero(self.reset_terminated[env_ids]).item()
-            extras["Episode_Termination/time_out"] = torch.count_nonzero(self.reset_time_outs[env_ids]).item()
+            # extras["Episode_Termination/base_contact"] = torch.count_nonzero(self.reset_terminated[env_ids]).item()
+            # extras["Episode_Termination/time_out"] = torch.count_nonzero(self.reset_time_outs[env_ids]).item()
             self.extras["log"].update(extras)
+    
