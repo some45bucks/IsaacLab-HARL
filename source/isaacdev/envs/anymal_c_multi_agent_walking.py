@@ -16,7 +16,7 @@ parser = argparse.ArgumentParser(description="Random agent for Isaac Lab environ
 parser.add_argument(
     "--disable_fabric", action="store_true", default=False, help="Disable fabric and use USD I/O operations."
 )
-parser.add_argument("--num_envs", type=int, default=1, help="Number of environments to simulate.")
+parser.add_argument("--num_envs", type=int, default=100, help="Number of environments to simulate.")
 parser.add_argument("--num_robots", type=int, default=2, help="Number of environments to simulate.")
 parser.add_argument("--task", type=str, default=None, help="Name of the task.")
 # append AppLauncher cli args
@@ -42,14 +42,14 @@ def main():
     """Random actions agent with Isaac Lab environment."""
     # create environment configuration
     env_cfg = parse_env_cfg(
-        'Isaac-Multi-Agent-Flat-Anymal-C-Direct-v0', 
+        'Isaac-Multi-Agent-Walking-Flat-Anymal-C-Direct-v0', 
         device=args_cli.device, 
         num_envs=args_cli.num_envs, 
         use_fabric=not args_cli.disable_fabric,
         num_robots=args_cli.num_robots
     )
     # create environment
-    env = gym.make('Isaac-Multi-Agent-Flat-Anymal-C-Direct-v0', cfg=env_cfg)
+    env = gym.make('Isaac-Multi-Agent-Walking-Flat-Anymal-C-Direct-v0', cfg=env_cfg)
 
     # print info (this is vectorized environment)
     print(f"[INFO]: Gym observation space: {env.observation_space}")

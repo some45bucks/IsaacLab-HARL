@@ -129,16 +129,16 @@ class AnymalCMultiAgentWalkingFlatEnvCfg(DirectRLEnvCfg):
     contact_sensor_0: ContactSensorCfg = ContactSensorCfg(
         prim_path="/World/envs/env_.*/Robot_0/.*", history_length=3, update_period=0.005, track_air_time=True
     )
-    robot_0.init_state.rot = (1.0, 0.0, 0.0, 1.0)
-    robot_0.init_state.pos = (-1.0, 0.0, 0.5)
+    robot_0.init_state.rot = (1.0, 0.0, 0.0, .75)
+    robot_0.init_state.pos = (-1.0, 0.0, 1.0)
 
 
     robot_1: ArticulationCfg = ANYMAL_C_CFG.replace(prim_path="/World/envs/env_.*/Robot_1")
     contact_sensor_1: ContactSensorCfg = ContactSensorCfg(
         prim_path="/World/envs/env_.*/Robot_1/.*", history_length=3, update_period=0.005, track_air_time=True
     )
-    robot_1.init_state.rot = (1.0, 0.0, 0.0, 1.0)
-    robot_1.init_state.pos = (1.0, 0.0, 0.5)
+    robot_1.init_state.rot = (1.0, 0.0, 0.0, .75)
+    robot_1.init_state.pos = (1.0, 0.0, 1.0)
 
     # rec prism
     cfg_rec_prism= RigidObjectCfg(
@@ -159,7 +159,7 @@ class AnymalCMultiAgentWalkingFlatEnvCfg(DirectRLEnvCfg):
         offset=RayCasterCfg.OffsetCfg(pos=(0.0, 0.0, 20.0)),
         attach_yaw_only=True,
         pattern_cfg=patterns.GridPatternCfg(resolution=0.1, size=[1.6, 1.0]),
-        debug_vis=False,
+        debug_vis=True,
         mesh_prim_paths=["/World/ground"],
     )
 
@@ -168,12 +168,12 @@ class AnymalCMultiAgentWalkingFlatEnvCfg(DirectRLEnvCfg):
         offset=RayCasterCfg.OffsetCfg(pos=(0.0, 0.0, 20.0)),
         attach_yaw_only=True,
         pattern_cfg=patterns.GridPatternCfg(resolution=0.1, size=[1.6, 1.0]),
-        debug_vis=False,
+        debug_vis=True,
         mesh_prim_paths=["/World/ground"],
     )
 
     # reward scales (override from flat config)
-    flat_orientation_reward_scale = 0.0
+    # flat_orientation_reward_scale = 0.0
 
     # reward scales
     lin_vel_reward_scale = 1.0
@@ -185,7 +185,7 @@ class AnymalCMultiAgentWalkingFlatEnvCfg(DirectRLEnvCfg):
     action_rate_reward_scale = -0.01
     feet_air_time_reward_scale = 0.5
     undersired_contact_reward_scale = -1.0
-    # flat_orientation_reward_scale = -5.0
+    flat_orientation_reward_scale = -5.0
 
 
 @configclass
@@ -234,47 +234,9 @@ class AnymalCMultiAgentWalkingRoughEnvCfg(AnymalCMultiAgentWalkingFlatEnvCfg):
     # # reward scales (override from flat config)
     # flat_orientation_reward_scale = 0.0
 
-def constant_commands(env: DirectRLEnv) -> torch.Tensor:
-    """The generated command from the command generator."""
-    return torch.tensor([[1, 0, 0]], device=env.device).repeat(env.num_envs, 1)
 
-@configclass
-class ObservationsCfg:
-    """Observation specifications for the MDP."""
-
-    @configclass
-    class PolicyCfg(ObsGroup):
-        """Observations for policy group."""
-
-        # observation terms (order preserved)
-        base_lin_vel = ObsTerm(func=mdp.base_lin_vel, noise=Unoise(n_min=-0.1, n_max=0.1))
-        base_ang_vel = ObsTerm(func=mdp.base_ang_vel, noise=Unoise(n_min=-0.2, n_max=0.2))
-        projected_gravity = ObsTerm(
-            func=mdp.projected_gravity,
-            noise=Unoise(n_min=-0.05, n_max=0.05),
-        )
-        velocity_commands = ObsTerm(func=constant_commands)
-        joint_pos = ObsTerm(func=mdp.joint_pos_rel, noise=Unoise(n_min=-0.01, n_max=0.01))
-        joint_vel = ObsTerm(func=mdp.joint_vel_rel, noise=Unoise(n_min=-1.5, n_max=1.5))
-        actions = ObsTerm(func=mdp.last_action)
-        height_scan = ObsTerm(
-            func=mdp.height_scan,
-            params={"sensor_cfg": SceneEntityCfg("height_scanner")},
-            noise=Unoise(n_min=-0.1, n_max=0.1),
-            clip=(-1.0, 1.0),
-        )
-
-        def __post_init__(self):
-            self.enable_corruption = True
-            self.concatenate_terms = True
-
-    # observation groups
-    policy: PolicyCfg = PolicyCfg()
-
-class AnymalCMultiAgent(DirectRLEnv):
+class AnymalCMultiAgentWalking(DirectRLEnv):
     cfg: AnymalCMultiAgentWalkingFlatEnvCfg | AnymalCMultiAgentWalkingRoughEnvCfg
-
-    observations: ObservationsCfg = ObservationsCfg()
 
     def __init__(self, cfg: AnymalCMultiAgentWalkingFlatEnvCfg | AnymalCMultiAgentWalkingRoughEnvCfg, render_mode: str | None = None, **kwargs):
         super().__init__(cfg, render_mode, **kwargs)
@@ -316,6 +278,19 @@ class AnymalCMultiAgent(DirectRLEnv):
             self.base_ids.append(_base_id)
             self.feet_ids.append(_feet_ids)
             self.undesired_body_contact_ids.append(_undesired_contact_body_ids)
+    
+    def __post_init__(self):
+        """Post initialization."""
+        # general settings
+        self.decimation = 4  # env decimation -> 50 Hz control
+        # simulation settings
+        self.sim.dt = 0.005  # simulation timestep -> 200 Hz physics
+        self.sim.physics_material = self.scene.terrain.physics_material
+        # update sensor update periods
+        # we tick all the sensors based on the smallest update period (physics update period)
+        if self.height_scanners is not None:
+            for height_scanner in self.height_scanners:
+                height_scanner.update_period = self.decimation * self.sim.dt  # 50 Hz
 
     def _setup_scene(self):
         self.num_robots = sum(1 for key in self.cfg.__dict__.keys() if "robot_" in key)
@@ -434,7 +409,7 @@ class AnymalCMultiAgent(DirectRLEnv):
                 "ang_vel_xy_l2": ang_vel_error * self.cfg.ang_vel_reward_scale * self.step_dt,
                 "dof_torques_l2": joint_torques * self.cfg.joint_torque_reward_scale * self.step_dt,
                 "dof_acc_l2": joint_accel * self.cfg.joint_accel_reward_scale * self.step_dt,
-                "action_rate_l2": (action_rate * self.cfg.action_rate_reward_scale * self.step_dt),
+                "action_rate_l2": (action_rate * self.cfg.action_rate_reward_scale * self.step_dt).repeat(self.num_envs),
                 "feet_air_time": air_time * self.cfg.feet_air_time_reward_scale * self.step_dt,
                 "undesired_contacts": contacts * self.cfg.undersired_contact_reward_scale * self.step_dt,
                 "flat_orientation_l2": flat_orientation * self.cfg.flat_orientation_reward_scale * self.step_dt,

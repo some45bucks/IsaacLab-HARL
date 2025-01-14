@@ -10,14 +10,14 @@ Ant locomotion environment.
 import gymnasium as gym
 
 from . import agents
-from .anymal_c_multi_agent_walking import AnymalCMultiAgentWalkingFlatEnvCfg, AnymalCMultiAgentWalkingRoughEnvCfg
+from .anymal_c_multi_agent_walking import AnymalCMultiAgentWalking, AnymalCMultiAgentWalkingFlatEnvCfg, AnymalCMultiAgentWalkingRoughEnvCfg
 ##
 # Register Gym environments.
 ##
 
 gym.register(
     id="Isaac-Multi-Agent-Walking-Flat-Anymal-C-Direct-v0",
-    entry_point="omni.isaac.lab_tasks.direct.anymal_c_multi_agent:AnymalCMultiAgent",
+    entry_point="omni.isaac.lab_tasks.direct.anymal_c_multi_agent_walking_policy:AnymalCMultiAgentWalking",
     disable_env_checker=True,
     kwargs={
         "env_cfg_entry_point": AnymalCMultiAgentWalkingFlatEnvCfg,
@@ -29,7 +29,7 @@ gym.register(
 
 gym.register(
     id="Isaac-Multi-Agent-Waalking-Velocity-Rough-Anymal-C-Direct-v0",
-    entry_point="omni.isaac.lab_tasks.direct.anymal_c_multi_agent:AnymalCMultiAgent",
+    entry_point="omni.isaac.lab_tasks.direct.anymal_c_multi_agent_walking_policy:AnymalCMultiAgentWalking",
     disable_env_checker=True,
     kwargs={
         "env_cfg_entry_point": AnymalCMultiAgentWalkingRoughEnvCfg,
