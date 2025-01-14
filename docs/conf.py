@@ -1,4 +1,4 @@
-# Copyright (c) 2022-2024, The Isaac Lab Project Developers.
+# Copyright (c) 2022-2025, The Isaac Lab Project Developers.
 # All rights reserved.
 #
 # SPDX-License-Identifier: BSD-3-Clause
@@ -26,7 +26,7 @@ sys.path.insert(0, os.path.abspath("../source/extensions/omni.isaac.lab_tasks/om
 # -- Project information -----------------------------------------------------
 
 project = "Isaac Lab"
-copyright = "2022-2024, The Isaac Lab Project Developers."
+copyright = "2022-2025, The Isaac Lab Project Developers."
 author = "The Isaac Lab Project Developers."
 
 # Read version from the package
@@ -262,7 +262,7 @@ html_sidebars = {
 
 def skip_member(app, what, name, obj, skip, options):
     # List the names of the functions you want to skip here
-    exclusions = ["from_dict", "to_dict", "replace", "copy", "__post_init__"]
+    exclusions = ["from_dict", "to_dict", "replace", "copy", "validate", "__post_init__"]
     if name in exclusions:
         return True
     return None

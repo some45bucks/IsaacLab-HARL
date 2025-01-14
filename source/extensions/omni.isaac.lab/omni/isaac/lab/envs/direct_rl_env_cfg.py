@@ -1,4 +1,4 @@
-# Copyright (c) 2022-2024, The Isaac Lab Project Developers.
+# Copyright (c) 2022-2025, The Isaac Lab Project Developers.
 # All rights reserved.
 #
 # SPDX-License-Identifier: BSD-3-Clause
@@ -98,7 +98,7 @@ class DirectRLEnvCfg:
     Please refer to the :class:`omni.isaac.lab.scene.InteractiveSceneCfg` class for more details.
     """
 
-    events: object = None
+    events: object | None = None
     """Event settings. Defaults to None, in which case no events are applied through the event manager.
 
     Please refer to the :class:`omni.isaac.lab.managers.EventManager` class for more details.

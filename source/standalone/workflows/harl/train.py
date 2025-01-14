@@ -3,13 +3,13 @@ import argparse
 import sys
 import json
 import time
-
+import tensorboardX
 from omni.isaac.lab.app import AppLauncher
 
 parser = argparse.ArgumentParser(description="Train an RL agent with HARL.")
 parser.add_argument("--video", action="store_true", default=True, help="Record videos during training.")
-parser.add_argument("--video_length", type=int, default=300, help="Length of the recorded video (in steps).")
-parser.add_argument("--video_interval", type=int, default=2000, help="Interval between video recordings (in steps).")
+parser.add_argument("--video_length", type=int, default=500, help="Length of the recorded video (in steps).")
+parser.add_argument("--video_interval", type=int, default=20000, help="Interval between video recordings (in steps).")
 parser.add_argument("--num_envs", type=int, default=None, help="Number of environments to simulate.")
 parser.add_argument("--task", type=str, default=None, help="Name of the task.")
 parser.add_argument("--seed", type=int, default=None, help="Seed used for the environment")
@@ -70,6 +70,8 @@ from omni.isaac.lab.utils.io import dump_pickle, dump_yaml
 
 import omni.isaac.lab_tasks  # noqa: F401
 from omni.isaac.lab_tasks.utils.hydra import hydra_task_config
+
+import tensorboardX
 
 agent_cfg_entry_point = "harl_ppo_cfg_entry_point"
 
