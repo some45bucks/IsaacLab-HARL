@@ -27,3 +27,7 @@
         }
     ]
 }
+
+
+--task Isaac-Shadow-Hand-Over-Direct-v0 --num_envs 4096 --headless --algo happo --num_env_steps 1000000000 --log_interval 10 --save_interval 100
+{workspaceFolder}/source/standalone/workflows/harl/train.py
