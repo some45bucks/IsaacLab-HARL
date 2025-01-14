@@ -47,17 +47,17 @@ class EventCfg:
         },
     )
 
-    physics_material_1 = EventTerm(
-        func=mdp.randomize_rigid_body_material,
-        mode="startup",
-        params={
-            "asset_cfg": SceneEntityCfg("robot_1", body_names=".*"),
-            "static_friction_range": (0.8, 0.8),
-            "dynamic_friction_range": (0.6, 0.6),
-            "restitution_range": (0.0, 0.0),
-            "num_buckets": 64,
-        },
-    )
+    # physics_material_1 = EventTerm(
+    #     func=mdp.randomize_rigid_body_material,
+    #     mode="startup",
+    #     params={
+    #         "asset_cfg": SceneEntityCfg("robot_1", body_names=".*"),
+    #         "static_friction_range": (0.8, 0.8),
+    #         "dynamic_friction_range": (0.6, 0.6),
+    #         "restitution_range": (0.0, 0.0),
+    #         "num_buckets": 64,
+    #     },
+    # )
 
     add_base_mass_0 = EventTerm(
         func=mdp.randomize_rigid_body_mass,
@@ -69,15 +69,15 @@ class EventCfg:
         },
     )
 
-    add_base_mass_1 = EventTerm(
-        func=mdp.randomize_rigid_body_mass,
-        mode="startup",
-        params={
-            "asset_cfg": SceneEntityCfg("robot_1", body_names="base"),
-            "mass_distribution_params": (-5.0, 5.0),
-            "operation": "add",
-        },
-    )
+    # add_base_mass_1 = EventTerm(
+    #     func=mdp.randomize_rigid_body_mass,
+    #     mode="startup",
+    #     params={
+    #         "asset_cfg": SceneEntityCfg("robot_1", body_names="base"),
+    #         "mass_distribution_params": (-5.0, 5.0),
+    #         "operation": "add",
+    #     },
+    # )
 
 
 @configclass
@@ -133,12 +133,12 @@ class AnymalCMultiAgentWalkingFlatEnvCfg(DirectRLEnvCfg):
     robot_0.init_state.pos = (-1.0, 0.0, 1.0)
 
 
-    robot_1: ArticulationCfg = ANYMAL_C_CFG.replace(prim_path="/World/envs/env_.*/Robot_1")
-    contact_sensor_1: ContactSensorCfg = ContactSensorCfg(
-        prim_path="/World/envs/env_.*/Robot_1/.*", history_length=3, update_period=0.005, track_air_time=True
-    )
-    robot_1.init_state.rot = (1.0, 0.0, 0.0, .75)
-    robot_1.init_state.pos = (1.0, 0.0, 1.0)
+    # robot_1: ArticulationCfg = ANYMAL_C_CFG.replace(prim_path="/World/envs/env_.*/Robot_1")
+    # contact_sensor_1: ContactSensorCfg = ContactSensorCfg(
+    #     prim_path="/World/envs/env_.*/Robot_1/.*", history_length=3, update_period=0.005, track_air_time=True
+    # )
+    # robot_1.init_state.rot = (1.0, 0.0, 0.0, .75)
+    # robot_1.init_state.pos = (1.0, 0.0, 1.0)
 
     # rec prism
     cfg_rec_prism= RigidObjectCfg(
@@ -163,14 +163,14 @@ class AnymalCMultiAgentWalkingFlatEnvCfg(DirectRLEnvCfg):
         mesh_prim_paths=["/World/ground"],
     )
 
-    height_scanner_1 = RayCasterCfg(
-        prim_path="/World/envs/env_.*/Robot_1/base",
-        offset=RayCasterCfg.OffsetCfg(pos=(0.0, 0.0, 20.0)),
-        attach_yaw_only=True,
-        pattern_cfg=patterns.GridPatternCfg(resolution=0.1, size=[1.6, 1.0]),
-        debug_vis=True,
-        mesh_prim_paths=["/World/ground"],
-    )
+    # height_scanner_1 = RayCasterCfg(
+    #     prim_path="/World/envs/env_.*/Robot_1/base",
+    #     offset=RayCasterCfg.OffsetCfg(pos=(0.0, 0.0, 20.0)),
+    #     attach_yaw_only=True,
+    #     pattern_cfg=patterns.GridPatternCfg(resolution=0.1, size=[1.6, 1.0]),
+    #     debug_vis=True,
+    #     mesh_prim_paths=["/World/ground"],
+    # )
 
     # reward scales (override from flat config)
     # flat_orientation_reward_scale = 0.0
@@ -331,17 +331,23 @@ class AnymalCMultiAgentWalking(DirectRLEnv):
 
     def _apply_action(self):
         for i, robot in enumerate(self.robots):
+            # if i == 0:
+            #     continue
             robot.set_joint_position_target(self.processed_actions[i])
+            
         # self._robot.set_joint_position_target(self._processed_actions)
 
     def _get_observations(self) -> dict:
         self.previous_actions = self.actions.clone()
+        height_datas = []
         for i in range(self.num_robots):
             height_data = None
             # if isinstance(self.cfg, AnymalCMultiAgentWalkingRoughEnvCfg):
             height_data = (
                 self.height_scanners[i].data.pos_w[:, 2].unsqueeze(1) - self.height_scanners[i].data.ray_hits_w[..., 2] - 0.5
             ).clip(-1.0, 1.0)
+            height_datas.append(height_data)
+
         
         obs = []
         for i, robot in enumerate(self.robots):
@@ -356,7 +362,7 @@ class AnymalCMultiAgentWalking(DirectRLEnv):
                     self._commands[curr_robot],
                     robot.data.joint_pos - robot.data.default_joint_pos,
                     robot.data.joint_vel,
-                    height_data,
+                    height_datas[i],
                     self.actions[curr_robot],
                 )
                 if tensor is not None

@@ -42,14 +42,14 @@ def main():
     """Random actions agent with Isaac Lab environment."""
     # create environment configuration
     env_cfg = parse_env_cfg(
-        'Isaac-Multi-Agent-Walking-Flat-Anymal-C-Direct-v0', 
+        'Isaac-Velocity-Rough-Anymal-C-Direct-v0', 
         device=args_cli.device, 
         num_envs=args_cli.num_envs, 
         use_fabric=not args_cli.disable_fabric,
         num_robots=args_cli.num_robots
     )
     # create environment
-    env = gym.make('Isaac-Multi-Agent-Walking-Flat-Anymal-C-Direct-v0', cfg=env_cfg)
+    env = gym.make('Isaac-Velocity-Rough-Anymal-C-Direct-v0', cfg=env_cfg)
 
     # print info (this is vectorized environment)
     print(f"[INFO]: Gym observation space: {env.observation_space}")
@@ -73,7 +73,9 @@ def main():
             actions = policy(obs['policy'])
             # actions = 2 * torch.rand((args_cli.num_envs*args_cli.num_robots, env.action_space.shape[1]), device=env.unwrapped.device) - 1
             # apply actions
+            env._commands = torch.tensor([[1, 0, 0]], device=env.device).repeat(env.num_envs, 1)
             obs, _, _, _, _ = env.step(actions)
+            
 
     # close the simulator
     env.close()
