@@ -20,6 +20,7 @@ from omni.isaac.lab.sim import SimulationCfg
 from omni.isaac.lab.terrains import TerrainImporterCfg
 from omni.isaac.lab.utils import configclass
 from omni.isaac.lab.utils.assets import ISAAC_NUCLEUS_DIR
+import copy
 
 ##
 # Pre-defined configs
@@ -130,16 +131,16 @@ class AnymalCMultiAgentFlatEnvCfg(DirectMARLEnvCfg):
     contact_sensor_0: ContactSensorCfg = ContactSensorCfg(
         prim_path="/World/envs/env_.*/Robot_0/.*", history_length=3, update_period=0.005, track_air_time=True
     )
-    robot_0.init_state.rot = (1.0, 0.0, 0.0, .75)
-    robot_0.init_state.pos = (-1.0, 0.0, 1.0)
+    robot_0.init_state.rot = (1.0, 0.0, 0.0, 1)
+    robot_0.init_state.pos = (-1.0, 0.0, .5)
 
 
     robot_1: ArticulationCfg = ANYMAL_C_CFG.replace(prim_path="/World/envs/env_.*/Robot_1")
     contact_sensor_1: ContactSensorCfg = ContactSensorCfg(
         prim_path="/World/envs/env_.*/Robot_1/.*", history_length=3, update_period=0.005, track_air_time=True
     )
-    robot_1.init_state.rot = (1.0, 0.0, 0.0, .75)
-    robot_1.init_state.pos = (1.0, 0.0, 1.0)
+    robot_1.init_state.rot = (1.0, 0.0, 0.0, 1)
+    robot_1.init_state.pos = (1.0, 0.0, .5)
 
     # rec prism
     cfg_rec_prism= RigidObjectCfg(
@@ -151,7 +152,7 @@ class AnymalCMultiAgentFlatEnvCfg(DirectMARLEnvCfg):
             collision_props=sim_utils.CollisionPropertiesCfg(),
             visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(0.0, 1.0, 0.0))
         ),
-        init_state=RigidObjectCfg.InitialStateCfg(pos=(0.0, 0, 2.0), rot=(1.0, 0.0, 0.0, 0.0)),
+        init_state=RigidObjectCfg.InitialStateCfg(pos=(0.0, 0, 1.5), rot=(1.0, 0.0, 0.0, 0.0)),
     )
 
     # we add a height scanner for perceptive locomotion
@@ -242,14 +243,11 @@ class AnymalCMultiAgent(DirectMARLEnv):
     def __init__(self, cfg: AnymalCMultiAgentFlatEnvCfg | AnymalCMultiAgentRoughEnvCfg, render_mode: str | None = None, **kwargs):
         super().__init__(cfg, render_mode, **kwargs)
         # Joint position command (deviation from default joint positions)
-        self.actions = torch.zeros(self.num_envs*self.num_robots, gym.spaces.flatdim(self.action_space("robot_0")), device=self.device)
-        self.previous_actions = torch.zeros(
-            self.num_envs*self.num_robots, gym.spaces.flatdim(self.action_space("robot_0")), device=self.device
-        )
+        self.actions = {agent : torch.zeros(self.num_envs, action_space, device=self.device) for agent, action_space in self.cfg.action_spaces.items()}
+        self.previous_actions = {agent : torch.zeros(self.num_envs, action_space, device=self.device) for agent, action_space in self.cfg.action_spaces.items()}
 
         # X/Y linear velocity and yaw angular velocity commands
-        self._commands = torch.zeros(self.num_envs*self.num_robots, 3, device=self.device)
-        self._commands[:, 0] = 1.0
+        self._commands = {agent : torch.zeros(self.num_envs, 3, device=self.device) for agent in self.cfg.possible_agents}
 
         # Logging
         self._episode_sums = {
@@ -268,36 +266,34 @@ class AnymalCMultiAgent(DirectMARLEnv):
             ]
         }
 
-        self.base_ids = []
-        self.feet_ids = []
-        self.undesired_body_contact_ids = []
+        self.base_ids = {}
+        self.feet_ids = {}
+        self.undesired_body_contact_ids = {}
 
-        for _contact_sensor in self.contact_sensors:
-            _base_id, _ = _contact_sensor.find_bodies("base")
-            _feet_ids, _ = _contact_sensor.find_bodies(".*FOOT")
-            _undesired_contact_body_ids, _ = _contact_sensor.find_bodies(".*THIGH")
-            self.base_ids.append(_base_id)
-            self.feet_ids.append(_feet_ids)
-            self.undesired_body_contact_ids.append(_undesired_contact_body_ids)
+        for robot_id, contact_sensor in self.contact_sensors.items():
+            _base_id, _ = contact_sensor.find_bodies("base")
+            _feet_ids, _ = contact_sensor.find_bodies(".*FOOT")
+            _undesired_contact_body_ids, _ = contact_sensor.find_bodies(".*THIGH")
+            self.base_ids[robot_id] = _base_id
+            self.feet_ids[robot_id] = _feet_ids
+            self.undesired_body_contact_ids[robot_id] = _undesired_contact_body_ids
 
     def _setup_scene(self):
         self.num_robots = sum(1 for key in self.cfg.__dict__.keys() if "robot_" in key)
-        self.robots = []
-        self.contact_sensors = []
-        self.height_scanners = []
+        self.robots = {}
+        self.contact_sensors = {}
+        self.height_scanners = {}
         self.object = RigidObject(self.cfg.cfg_rec_prism)
         
         self.scene.rigid_objects["object"] = self.object
 
         for i in range(self.num_robots):
-            self.robots.append(Articulation(self.cfg.__dict__["robot_" + str(i)]))
-            self.scene.articulations[f"robot_{i}"] = self.robots[i]
-            self.contact_sensors.append(ContactSensor(self.cfg.__dict__["contact_sensor_" + str(i)]))
-            self.scene.sensors[f"contact_sensor_{i}"] = self.contact_sensors[i]
-            # if isinstance(self.cfg, AnymalCMultiAgentWalkingRoughEnvCfg):
-                # we add a height scanner for perceptive locomotion
-            self.height_scanners.append(RayCaster(self.cfg.__dict__["height_scanner_" + str(i)]))
-            self.scene.sensors[f"height_scanner_{i}"] = self.height_scanners[i]
+            self.robots[f"robot_{i}"] = (Articulation(self.cfg.__dict__["robot_" + str(i)]))
+            self.scene.articulations[f"robot_{i}"] = self.robots[f"robot_{i}"]
+            self.contact_sensors[f"robot_{i}"] = ContactSensor(self.cfg.__dict__["contact_sensor_" + str(i)])
+            self.scene.sensors[f"robot_{i}"] = self.contact_sensors[f"robot_{i}"]
+            self.height_scanners[f"robot_{i}"] = RayCaster(self.cfg.__dict__["height_scanner_" + str(i)])
+            self.scene.sensors[f"robot_{i}"] = self.height_scanners[f"robot_{i}"]
 
         self.cfg.terrain.num_envs = self.scene.cfg.num_envs
         self.cfg.terrain.env_spacing = self.scene.cfg.env_spacing
@@ -311,44 +307,41 @@ class AnymalCMultiAgent(DirectMARLEnv):
 
     def _pre_physics_step(self, actions: torch.Tensor):
         # We need to process the actions for each scene independently
-        self.processed_actions = torch.zeros_like(actions)
-        for i, robot in enumerate(self.robots):
-            curr_robot = slice(self.num_envs * i, self.num_envs * (i + 1))
-            self.actions[curr_robot] = actions[curr_robot].clone()
-            self.processed_actions[curr_robot] = self.cfg.action_scale * self.actions[curr_robot] + robot.data.default_joint_pos
+        self.processed_actions = copy.deepcopy(actions)
+        for robot_id, robot in self.robots.items():
+            self.actions[robot_id] = actions[robot_id].clone()
+            self.processed_actions[robot_id] = self.cfg.action_scale * self.actions[robot_id] + robot.data.default_joint_pos
 
     def _apply_action(self):
-        for i, robot in enumerate(self.robots):
-            robot.set_joint_position_target(self.processed_actions[i])
-        # self._robot.set_joint_position_target(self._processed_actions)
+        for robot_id, robot in self.robots.items():
+            robot.set_joint_position_target(self.processed_actions[robot_id])
 
     def _get_observations(self) -> dict:
-        self.previous_actions = self.actions.clone()
-        height_datas = []
-        for i in range(self.num_robots):
+        self.previous_actions = copy.deepcopy(self.actions)
+        height_datas = {}
+        for robot_id, robot in self.robots.items():
             height_data = None
             # if isinstance(self.cfg, AnymalCMultiAgentWalkingRoughEnvCfg):
             height_data = (
-                self.height_scanners[i].data.pos_w[:, 2].unsqueeze(1) - self.height_scanners[i].data.ray_hits_w[..., 2] - 0.5
+                self.height_scanners[robot_id].data.pos_w[:, 2].unsqueeze(1) - self.height_scanners[robot_id].data.ray_hits_w[..., 2] - 0.5
             ).clip(-1.0, 1.0)
-            height_datas.append(height_data)
+            height_datas[robot_id] = (height_data)
 
         
         obs = {}
-        for i, robot in enumerate(self.robots):
-            curr_robot = slice(self.num_envs * i, self.num_envs * (i + 1))
-            obs["robot_" + str(i)] = (torch.cat(
+        for robot_id, robot in self.robots.items():
+            obs[robot_id] = (torch.cat(
             [
                 tensor
                 for tensor in (
                     robot.data.root_lin_vel_b,
                     robot.data.root_ang_vel_b,
                     robot.data.projected_gravity_b,
-                    self._commands[curr_robot],
+                    self._commands[robot_id],
                     robot.data.joint_pos - robot.data.default_joint_pos,
                     robot.data.joint_vel,
-                    height_datas[i],
-                    self.actions[curr_robot],
+                    height_datas[robot_id],
+                    self.actions[robot_id],
                 )
                 if tensor is not None
             ],
@@ -360,13 +353,12 @@ class AnymalCMultiAgent(DirectMARLEnv):
 
     def _get_rewards(self) -> torch.Tensor:
         reward = None
-        for i, robot in enumerate(self.robots):
-            curr_robot = slice(self.num_envs * i, self.num_envs * (i + 1))
+        for robot_id, robot in self.robots.items():
             # linear velocity tracking
-            lin_vel_error = torch.sum(torch.square(self._commands[curr_robot][:, :2] - robot.data.root_lin_vel_b[:, :2]), dim=1)
+            lin_vel_error = torch.sum(torch.square(self._commands[robot_id][:, :2] - robot.data.root_lin_vel_b[:, :2]), dim=1)
             lin_vel_error_mapped = torch.exp(-lin_vel_error / 0.25)
             # yaw rate tracking
-            yaw_rate_error = torch.square(self._commands[curr_robot][:, 2] - robot.data.root_ang_vel_b[:, 2])
+            yaw_rate_error = torch.square(self._commands[robot_id][:, 2] - robot.data.root_ang_vel_b[:, 2])
             yaw_rate_error_mapped = torch.exp(-yaw_rate_error / 0.25)
             # z velocity tracking
             z_vel_error = torch.square(robot.data.root_lin_vel_b[:, 2])
@@ -377,17 +369,17 @@ class AnymalCMultiAgent(DirectMARLEnv):
             # joint acceleration
             joint_accel = torch.sum(torch.square(robot.data.joint_acc), dim=1)
             # action rate            
-            action_rate = torch.sum(torch.square(self.actions[i] - self.previous_actions[i]).view(1,-1), dim=1)
+            action_rate = torch.sum(torch.square(self.actions[robot_id] - self.previous_actions[robot_id]).view(1,-1), dim=1)
             # feet air time
-            first_contact = self.contact_sensors[i].compute_first_contact(self.step_dt)[:, self.feet_ids[i]]
-            last_air_time = self.contact_sensors[i].data.last_air_time[:, self.feet_ids[i]]
+            first_contact = self.contact_sensors[robot_id].compute_first_contact(self.step_dt)[:, self.feet_ids[robot_id]]
+            last_air_time = self.contact_sensors[robot_id].data.last_air_time[:, self.feet_ids[robot_id]]
             air_time = torch.sum((last_air_time - 0.5) * first_contact, dim=1) * (
-                torch.norm(self._commands[curr_robot][:, :2], dim=1) > 0.1
+                torch.norm(self._commands[robot_id][:, :2], dim=1) > 0.1
             )
             # undersired contacts
-            net_contact_forces = self.contact_sensors[i].data.net_forces_w_history
+            net_contact_forces = self.contact_sensors[robot_id].data.net_forces_w_history
             is_contact = (
-                torch.max(torch.norm(net_contact_forces[:, :, self.undesired_body_contact_ids[i]], dim=-1), dim=1)[0] > 1.0
+                torch.max(torch.norm(net_contact_forces[:, :, self.undesired_body_contact_ids[robot_id]], dim=-1), dim=1)[0] > 1.0
             )
             contacts = torch.sum(is_contact, dim=1)
             # flat orientation
@@ -417,7 +409,7 @@ class AnymalCMultiAgent(DirectMARLEnv):
         return reward
 
     # def _get_dones(self) -> tuple[torch.Tensor, torch.Tensor]:
-    #     all_dones = []
+    #     all_dones = {}
     #     all_died = []
     #     for i in range(self.num_robots):
     #         time_out = self.episode_length_buf >= self.max_episode_length - 1
@@ -430,13 +422,13 @@ class AnymalCMultiAgent(DirectMARLEnv):
 
     #TODO: Implement a dones function that handles multiple robots 
     def _get_dones(self) -> tuple[torch.Tensor, torch.Tensor]:
-        contact_sensor = self.contact_sensors[0]
-        base_id = self.base_ids[0]
+        # contact_sensor = self.contact_sensors[0]
+        # base_id = self.base_ids[0]
 
-        time_out = self.episode_length_buf >= self.max_episode_length - 1
-        net_contact_forces = contact_sensor.data.net_forces_w_history
-        died = torch.any(torch.max(torch.norm(net_contact_forces[:, :, base_id], dim=-1), dim=1)[0] > 1.0, dim=1)
-        return False, False
+        # time_out = self.episode_length_buf >= self.max_episode_length - 1
+        # net_contact_forces = contact_sensor.data.net_forces_w_history
+        # died = torch.any(torch.max(torch.norm(net_contact_forces[:, :, base_id], dim=-1), dim=1)[0] > 1.0, dim=1)
+        return {'a': False}, {'a': False}
     
     def _reset_idx(self, env_ids: torch.Tensor | None):
         super()._reset_idx(env_ids)
@@ -447,17 +439,22 @@ class AnymalCMultiAgent(DirectMARLEnv):
         )
         self.object.write_root_state_to_sim(object_default_state, env_ids)
         # self.object.reset(env_ids)
-        for robot in self.robots:
+
+        # Joint position command (deviation from default joint positions)
+        self.actions = {agent : torch.zeros(self.num_envs, action_space, device=self.device) for agent, action_space in self.cfg.action_spaces.items()}
+        self.previous_actions = {agent : torch.zeros(self.num_envs, action_space, device=self.device) for agent, action_space in self.cfg.action_spaces.items()}
+
+        # X/Y linear velocity and yaw angular velocity commands
+        self._commands = {agent : torch.zeros(self.num_envs, 3, device=self.device) for agent in self.cfg.possible_agents}
+
+        for _, robot in self.robots.items():
             if env_ids is None or len(env_ids) == self.num_envs:
                 env_ids = robot._ALL_INDICES
             robot.reset(env_ids)
             if len(env_ids) == self.num_envs:
                 # Spread out the resets to avoid spikes in training when many environments reset at a similar time
                 self.episode_length_buf[:] = torch.randint_like(self.episode_length_buf, high=int(self.max_episode_length))
-            self.actions[env_ids] = 0.0
-            self.previous_actions[env_ids] = 0.0
-            # Sample new commands
-            self._commands[env_ids] = torch.zeros_like(self._commands[env_ids]).uniform_(-1.0, 1.0)
+
             # Reset robot state
             joint_pos = robot.data.default_joint_pos[env_ids]
             joint_vel = robot.data.default_joint_vel[env_ids]
