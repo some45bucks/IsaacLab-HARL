@@ -351,8 +351,8 @@ class AnymalCMultiAgent(DirectMARLEnv):
         # observations = {"policy": obs}
         return obs
 
-    def _get_rewards(self) -> torch.Tensor:
-        reward = None
+    def _get_rewards(self) -> dict:
+        reward = {}
         for robot_id, robot in self.robots.items():
             # linear velocity tracking
             lin_vel_error = torch.sum(torch.square(self._commands[robot_id][:, :2] - robot.data.root_lin_vel_b[:, :2]), dim=1)
@@ -398,14 +398,13 @@ class AnymalCMultiAgent(DirectMARLEnv):
                 "flat_orientation_l2": flat_orientation * self.cfg.flat_orientation_reward_scale * self.step_dt,
             }
             curr_reward = torch.sum(torch.stack(list(rewards.values())), dim=0)
-            if reward is not None:
-                reward += curr_reward
-            else:
-                reward = curr_reward
+
+            reward[robot_id] = curr_reward
 
         # Logging
         for key, value in rewards.items():
             self._episode_sums[key] += value
+
         return reward
 
     # def _get_dones(self) -> tuple[torch.Tensor, torch.Tensor]:
