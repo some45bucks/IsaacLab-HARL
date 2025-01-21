@@ -188,6 +188,8 @@ class AnymalCMultiAgentFlatEnvCfg(DirectMARLEnvCfg):
     feet_air_time_reward_scale = 0.5
     undersired_contact_reward_scale = -1.0
     flat_orientation_reward_scale = -5.0
+    flat_bar_yaw_angle_reward_scale = -10
+
 
 
 @configclass
@@ -263,6 +265,7 @@ class AnymalCMultiAgent(DirectMARLEnv):
                 "feet_air_time",
                 "undesired_contacts",
                 "flat_orientation_l2",
+                "flat_bar_yaw_angle"
             ]
         }
 
@@ -396,6 +399,7 @@ class AnymalCMultiAgent(DirectMARLEnv):
                 "feet_air_time": air_time * self.cfg.feet_air_time_reward_scale * self.step_dt,
                 "undesired_contacts": contacts * self.cfg.undersired_contact_reward_scale * self.step_dt,
                 "flat_orientation_l2": flat_orientation * self.cfg.flat_orientation_reward_scale * self.step_dt,
+                "flat_bar_yaw_angle" : torch.abs(self.object.data.root_quat_w[:,2]) * self.cfg.flat_bar_yaw_angle_reward_scale * self.step_dt
             }
             curr_reward = torch.sum(torch.stack(list(rewards.values())), dim=0)
 
@@ -421,13 +425,15 @@ class AnymalCMultiAgent(DirectMARLEnv):
 
     #TODO: Implement a dones function that handles multiple robots 
     def _get_dones(self) -> tuple[dict, dict]:
+        z_object_pos = self.object.data.root_quat_w[:,2].squeeze()
+        dones = (torch.abs(z_object_pos) > 0.03)
         # contact_sensor = self.contact_sensors[0]
         # base_id = self.base_ids[0]
 
         # time_out = self.episode_length_buf >= self.max_episode_length - 1
         # net_contact_forces = contact_sensor.data.net_forces_w_history
         # died = torch.any(torch.max(torch.norm(net_contact_forces[:, :, base_id], dim=-1), dim=1)[0] > 1.0, dim=1)
-        return {key:torch.tensor([False]).repeat(self.num_envs) for key in self.robots.keys()}, {key:torch.tensor([False]).repeat(self.num_envs)  for key in self.robots.keys()}
+        return {key:dones for key in self.robots.keys()}, {key:dones  for key in self.robots.keys()}
     
     def _reset_idx(self, env_ids: torch.Tensor | None):
         super()._reset_idx(env_ids)
