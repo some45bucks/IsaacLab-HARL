@@ -188,7 +188,7 @@ class AnymalCMultiAgentFlatEnvCfg(DirectMARLEnvCfg):
     feet_air_time_reward_scale = 0.5
     undersired_contact_reward_scale = -1.0
     flat_orientation_reward_scale = -5.0
-    flat_bar_yaw_angle_reward_scale = -10
+    flat_bar_roll_angle_reward_scale = -10
 
 
 
@@ -265,7 +265,7 @@ class AnymalCMultiAgent(DirectMARLEnv):
                 "feet_air_time",
                 "undesired_contacts",
                 "flat_orientation_l2",
-                "flat_bar_yaw_angle"
+                "flat_bar_roll_angle"
             ]
         }
 
@@ -399,7 +399,7 @@ class AnymalCMultiAgent(DirectMARLEnv):
                 "feet_air_time": air_time * self.cfg.feet_air_time_reward_scale * self.step_dt,
                 "undesired_contacts": contacts * self.cfg.undersired_contact_reward_scale * self.step_dt,
                 "flat_orientation_l2": flat_orientation * self.cfg.flat_orientation_reward_scale * self.step_dt,
-                "flat_bar_yaw_angle" : torch.abs(self.object.data.root_quat_w[:,2]) * self.cfg.flat_bar_yaw_angle_reward_scale * self.step_dt
+                "flat_bar_roll_angle" : torch.abs(self.object.data.root_quat_w[:,2]) * self.cfg.flat_bar_roll_angle_reward_scale * self.step_dt
             }
             curr_reward = torch.sum(torch.stack(list(rewards.values())), dim=0)
 
