@@ -426,14 +426,14 @@ class AnymalCMultiAgent(DirectMARLEnv):
     #TODO: Implement a dones function that handles multiple robots 
     def _get_dones(self) -> tuple[dict, dict]:
         z_object_pos = self.object.data.root_quat_w[:,2].squeeze()
-        dones = (torch.abs(z_object_pos) > 0.03)
+        bar_angle_dones = (torch.abs(z_object_pos) > 0.03)
         # contact_sensor = self.contact_sensors[0]
         # base_id = self.base_ids[0]
 
-        # time_out = self.episode_length_buf >= self.max_episode_length - 1
+        time_out = self.episode_length_buf >= self.max_episode_length - 1
         # net_contact_forces = contact_sensor.data.net_forces_w_history
         # died = torch.any(torch.max(torch.norm(net_contact_forces[:, :, base_id], dim=-1), dim=1)[0] > 1.0, dim=1)
-        return {key:dones for key in self.robots.keys()}, {key:dones  for key in self.robots.keys()}
+        return {key:time_out for key in self.robots.keys()}, {key:bar_angle_dones  for key in self.robots.keys()}
     
     def _reset_idx(self, env_ids: torch.Tensor | None):
         super()._reset_idx(env_ids)
