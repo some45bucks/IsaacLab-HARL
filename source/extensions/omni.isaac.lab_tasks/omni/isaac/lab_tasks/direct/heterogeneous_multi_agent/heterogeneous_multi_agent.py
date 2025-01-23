@@ -26,6 +26,7 @@ import copy
 # Pre-defined configs
 ##
 from omni.isaac.lab_assets.anymal import ANYMAL_C_CFG  # isort: skip
+from omni.isaac.lab_assets.spot import SPOT_CFG  # isort: skip
 from omni.isaac.lab.terrains.config.rough import ROUGH_TERRAINS_CFG  # isort: skip
 
 
@@ -71,7 +72,7 @@ class EventCfg:
         func=mdp.randomize_rigid_body_mass,
         mode="startup",
         params={
-            "asset_cfg": SceneEntityCfg("robot_1", body_names="base"),
+            "asset_cfg": SceneEntityCfg("robot_1", body_names="body"),
             "mass_distribution_params": (-5.0, 5.0),
             "operation": "add",
         },
@@ -79,19 +80,16 @@ class EventCfg:
 
 
 @configclass
-class AnymalCMultiAgentFlatEnvCfg(DirectMARLEnvCfg):
+class HeterogeneousMultiAgentFlatEnvCfg(DirectMARLEnvCfg):
     # env
     episode_length_s = 20.0
     decimation = 4
     action_scale = 0.5
-    action_space = 12
-    action_spaces = {f"robot_{i}": 12 for i in range(2)}
-    # observation_space = 48
-    observation_space = 235
-    observation_spaces = {f"robot_{i}": 235 for i in range(2)}
+    action_spaces = {}
+    observation_spaces = {}
     state_space = 0
-    state_spaces = {f"robot_{i}": 0 for i in range(2)}
-    possible_agents = ["robot_0", "robot_1"]
+    state_spaces = {}
+    possible_agents = []
 
     # simulation
     sim: SimulationCfg = SimulationCfg(
@@ -126,7 +124,8 @@ class AnymalCMultiAgentFlatEnvCfg(DirectMARLEnvCfg):
     # events
     events: EventCfg = EventCfg()
 
-    # robot
+    ########### ROBOT_0 ANYMAL ###########
+
     robot_0: ArticulationCfg = ANYMAL_C_CFG.replace(prim_path="/World/envs/env_.*/Robot_0")
     contact_sensor_0: ContactSensorCfg = ContactSensorCfg(
         prim_path="/World/envs/env_.*/Robot_0/.*", history_length=3, update_period=0.005, track_air_time=True
@@ -134,13 +133,47 @@ class AnymalCMultiAgentFlatEnvCfg(DirectMARLEnvCfg):
     robot_0.init_state.rot = (1.0, 0.0, 0.0, 1)
     robot_0.init_state.pos = (-1.0, 0.0, .5)
 
+    height_scanner_0 = RayCasterCfg(
+        prim_path="/World/envs/env_.*/Robot_0/base",
+        offset=RayCasterCfg.OffsetCfg(pos=(0.0, 0.0, 20.0)),
+        attach_yaw_only=True,
+        pattern_cfg=patterns.GridPatternCfg(resolution=0.1, size=[1.6, 1.0]),
+        debug_vis=True,
+        mesh_prim_paths=["/World/ground"],
+    )
 
-    robot_1: ArticulationCfg = ANYMAL_C_CFG.replace(prim_path="/World/envs/env_.*/Robot_1")
+    action_spaces['robot_0'] = 12
+    observation_spaces['robot_0'] = 235
+    state_spaces['robot_0'] = 0
+    possible_agents.append('robot_0')
+
+    ########### ROBOT_0 ANYMAL ###########
+
+    ########### ROBOT_1 SPOT ###########
+
+    robot_1: ArticulationCfg = SPOT_CFG.replace(prim_path="/World/envs/env_.*/Robot_1")
     contact_sensor_1: ContactSensorCfg = ContactSensorCfg(
         prim_path="/World/envs/env_.*/Robot_1/.*", history_length=3, update_period=0.005, track_air_time=True
     )
     robot_1.init_state.rot = (1.0, 0.0, 0.0, 1)
-    robot_1.init_state.pos = (1.0, 0.0, .5)
+    robot_1.init_state.pos = (1.0, 0.0, .6)
+
+    height_scanner_1 = RayCasterCfg(
+        prim_path="/World/envs/env_.*/Robot_1/body",
+        offset=RayCasterCfg.OffsetCfg(pos=(0.0, 0.0, 20.0)),
+        attach_yaw_only=True,
+        pattern_cfg=patterns.GridPatternCfg(resolution=0.1, size=[1.6, 1.0]),
+        debug_vis=True,
+        mesh_prim_paths=["/World/ground"],
+    )
+
+    action_spaces['robot_1'] = 12
+    observation_spaces['robot_1'] = 235
+    state_spaces['robot_1'] = 0
+    possible_agents.append('robot_1')
+
+    ########### ROBOT_1 SPOT ###########
+
 
     # rec prism
     cfg_rec_prism= RigidObjectCfg(
@@ -156,23 +189,9 @@ class AnymalCMultiAgentFlatEnvCfg(DirectMARLEnvCfg):
     )
 
     # we add a height scanner for perceptive locomotion
-    height_scanner_0 = RayCasterCfg(
-        prim_path="/World/envs/env_.*/Robot_0/base",
-        offset=RayCasterCfg.OffsetCfg(pos=(0.0, 0.0, 20.0)),
-        attach_yaw_only=True,
-        pattern_cfg=patterns.GridPatternCfg(resolution=0.1, size=[1.6, 1.0]),
-        debug_vis=True,
-        mesh_prim_paths=["/World/ground"],
-    )
 
-    height_scanner_1 = RayCasterCfg(
-        prim_path="/World/envs/env_.*/Robot_1/base",
-        offset=RayCasterCfg.OffsetCfg(pos=(0.0, 0.0, 20.0)),
-        attach_yaw_only=True,
-        pattern_cfg=patterns.GridPatternCfg(resolution=0.1, size=[1.6, 1.0]),
-        debug_vis=True,
-        mesh_prim_paths=["/World/ground"],
-    )
+
+
 
     # reward scales (override from flat config)
     flat_orientation_reward_scale = 0.0
@@ -193,7 +212,7 @@ class AnymalCMultiAgentFlatEnvCfg(DirectMARLEnvCfg):
 
 
 @configclass
-class AnymalCMultiAgentRoughEnvCfg(AnymalCMultiAgentFlatEnvCfg):
+class HeterogeneousMultiAgentRoughEnvCfg(HeterogeneousMultiAgentFlatEnvCfg):
     # env
     observation_space = 235
 
@@ -227,7 +246,7 @@ class AnymalCMultiAgentRoughEnvCfg(AnymalCMultiAgentFlatEnvCfg):
     )
 
     height_scanner_1 = RayCasterCfg(
-        prim_path="/World/envs/env_.*/Robot_1/base",
+        prim_path="/World/envs/env_.*/Robot_1/body",
         offset=RayCasterCfg.OffsetCfg(pos=(0.0, 0.0, 20.0)),
         attach_yaw_only=True,
         pattern_cfg=patterns.GridPatternCfg(resolution=0.1, size=[1.6, 1.0]),
@@ -239,12 +258,13 @@ class AnymalCMultiAgentRoughEnvCfg(AnymalCMultiAgentFlatEnvCfg):
     flat_orientation_reward_scale = 0.0
 
 
-class AnymalCMultiAgent(DirectMARLEnv):
-    cfg: AnymalCMultiAgentFlatEnvCfg | AnymalCMultiAgentRoughEnvCfg
+class HeterogeneousMultiAgent(DirectMARLEnv):
+    cfg: HeterogeneousMultiAgentFlatEnvCfg | HeterogeneousMultiAgentRoughEnvCfg
 
-    def __init__(self, cfg: AnymalCMultiAgentFlatEnvCfg | AnymalCMultiAgentRoughEnvCfg, render_mode: str | None = None, **kwargs):
+    def __init__(self, cfg: HeterogeneousMultiAgentFlatEnvCfg | HeterogeneousMultiAgentRoughEnvCfg, render_mode: str | None = None, **kwargs):
         super().__init__(cfg, render_mode, **kwargs)
         # Joint position command (deviation from default joint positions)
+        self.cfg.action_spaces = {robot_id:robot.data.default_joint_pos.shape[1] for robot_id, robot in self.robots.items()}
         self.actions = {agent : torch.zeros(self.num_envs, action_space, device=self.device) for agent, action_space in self.cfg.action_spaces.items()}
         self.previous_actions = {agent : torch.zeros(self.num_envs, action_space, device=self.device) for agent, action_space in self.cfg.action_spaces.items()}
 
@@ -273,13 +293,24 @@ class AnymalCMultiAgent(DirectMARLEnv):
         self.feet_ids = {}
         self.undesired_body_contact_ids = {}
 
-        for robot_id, contact_sensor in self.contact_sensors.items():
-            _base_id, _ = contact_sensor.find_bodies("base")
-            _feet_ids, _ = contact_sensor.find_bodies(".*FOOT")
-            _undesired_contact_body_ids, _ = contact_sensor.find_bodies(".*THIGH")
-            self.base_ids[robot_id] = _base_id
-            self.feet_ids[robot_id] = _feet_ids
-            self.undesired_body_contact_ids[robot_id] = _undesired_contact_body_ids
+
+        robot_id = "robot_0"
+        contact_sensor = self.contact_sensors[robot_id]
+        _base_id, _ = contact_sensor.find_bodies("base")
+        _feet_ids, _ = contact_sensor.find_bodies(".*FOOT")
+        _undesired_contact_body_ids, _ = contact_sensor.find_bodies(".*THIGH")
+        self.base_ids[robot_id] = _base_id
+        self.feet_ids[robot_id] = _feet_ids
+        self.undesired_body_contact_ids[robot_id] = _undesired_contact_body_ids  
+
+        robot_id = "robot_1"
+        contact_sensor = self.contact_sensors[robot_id]
+        _base_id, _ = contact_sensor.find_bodies("body")
+        _feet_ids, _ = contact_sensor.find_bodies(".*foot")
+        _undesired_contact_body_ids, _ = contact_sensor.find_bodies(".*hip")
+        self.base_ids[robot_id] = _base_id
+        self.feet_ids[robot_id] = _feet_ids
+        self.undesired_body_contact_ids[robot_id] = _undesired_contact_body_ids     
 
     def _setup_scene(self):
         self.num_robots = sum(1 for key in self.cfg.__dict__.keys() if "robot_" in key)
@@ -309,7 +340,6 @@ class AnymalCMultiAgent(DirectMARLEnv):
         light_cfg.func("/World/Light", light_cfg)
 
     def _pre_physics_step(self, actions: torch.Tensor):
-        # We need to process the actions for each scene independently
         self.processed_actions = copy.deepcopy(actions)
         for robot_id, robot in self.robots.items():
             self.actions[robot_id] = actions[robot_id].clone()
@@ -324,7 +354,7 @@ class AnymalCMultiAgent(DirectMARLEnv):
         height_datas = {}
         for robot_id, robot in self.robots.items():
             height_data = None
-            # if isinstance(self.cfg, AnymalCMultiAgentWalkingRoughEnvCfg):
+            # if isinstance(self.cfg, HeterogeneousMultiAgentWalkingRoughEnvCfg):
             height_data = (
                 self.height_scanners[robot_id].data.pos_w[:, 2].unsqueeze(1) - self.height_scanners[robot_id].data.ray_hits_w[..., 2] - 0.5
             ).clip(-1.0, 1.0)
@@ -353,6 +383,11 @@ class AnymalCMultiAgent(DirectMARLEnv):
         # obs = torch.cat(obs, dim=0)
         # observations = {"policy": obs}
         return obs
+    
+    def get_y_euler_from_quat(self, quaternion):
+        w, x, y, z = quaternion[:,0], quaternion[:,1], quaternion[:,2], quaternion[:,3]
+        y_euler_angle = torch.arcsin(2 * (w * y - z * x))
+        return y_euler_angle
 
     def _get_rewards(self) -> dict:
         reward = {}
@@ -399,7 +434,8 @@ class AnymalCMultiAgent(DirectMARLEnv):
                 "feet_air_time": air_time * self.cfg.feet_air_time_reward_scale * self.step_dt,
                 "undesired_contacts": contacts * self.cfg.undersired_contact_reward_scale * self.step_dt,
                 "flat_orientation_l2": flat_orientation * self.cfg.flat_orientation_reward_scale * self.step_dt,
-                "flat_bar_roll_angle" : torch.abs(self.object.data.root_quat_w[:,2]) * self.cfg.flat_bar_roll_angle_reward_scale * self.step_dt
+                "flat_bar_roll_angle" : torch.abs(self.get_y_euler_from_quat(self.object.data.root_quat_w))\
+                      * self.cfg.flat_bar_roll_angle_reward_scale * self.step_dt
             }
             curr_reward = torch.sum(torch.stack(list(rewards.values())), dim=0)
 
@@ -425,15 +461,20 @@ class AnymalCMultiAgent(DirectMARLEnv):
 
     #TODO: Implement a dones function that handles multiple robots 
     def _get_dones(self) -> tuple[dict, dict]:
-        z_object_pos = self.object.data.root_quat_w[:,2].squeeze()
-        bar_angle_dones = (torch.abs(z_object_pos) > 0.03)
-        # contact_sensor = self.contact_sensors[0]
-        # base_id = self.base_ids[0]
+        y_euler_angle = self.get_y_euler_from_quat(self.object.data.root_quat_w) 
+        # if the angle of the bar > pi/64 reset
+        bar_angle_dones = (torch.abs(y_euler_angle) > 0.1)
+
+        # check if the bar has fallen on the ground
+        bar_z_pos = self.object.data.body_pos_w[:,:,2].view(-1)
+        bar_fallen = bar_z_pos < 0.2
+
+        dones = torch.logical_or(bar_angle_dones, bar_fallen)
 
         time_out = self.episode_length_buf >= self.max_episode_length - 1
         # net_contact_forces = contact_sensor.data.net_forces_w_history
         # died = torch.any(torch.max(torch.norm(net_contact_forces[:, :, base_id], dim=-1), dim=1)[0] > 1.0, dim=1)
-        return {key:time_out for key in self.robots.keys()}, {key:bar_angle_dones  for key in self.robots.keys()}
+        return {key:time_out for key in self.robots.keys()}, {key:dones  for key in self.robots.keys()}
     
     def _reset_idx(self, env_ids: torch.Tensor | None):
         super()._reset_idx(env_ids)
