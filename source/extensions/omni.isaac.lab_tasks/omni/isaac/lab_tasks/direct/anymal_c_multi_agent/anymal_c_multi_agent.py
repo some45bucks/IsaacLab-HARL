@@ -319,6 +319,7 @@ class AnymalCMultiAgent(DirectMARLEnv):
         for robot_id, robot in self.robots.items():
             robot.set_joint_position_target(self.processed_actions[robot_id])
 
+    
     def _get_observations(self) -> dict:
         self.previous_actions = copy.deepcopy(self.actions)
         height_datas = {}
@@ -450,7 +451,9 @@ class AnymalCMultiAgent(DirectMARLEnv):
         self.previous_actions = {agent : torch.zeros(self.num_envs, action_space, device=self.device) for agent, action_space in self.cfg.action_spaces.items()}
 
         # X/Y linear velocity and yaw angular velocity commands
-        self._commands = {agent : torch.zeros(self.num_envs, 3, device=self.device) for agent in self.cfg.possible_agents}
+        command = torch.zeros(self.num_envs, 3, device=self.device).uniform_(-1.0, 1.0)
+        command[:, 2] = 0.0
+        self._commands = {agent : command for agent in self.cfg.possible_agents}
 
         for _, robot in self.robots.items():
             if env_ids is None or len(env_ids) == self.num_envs:

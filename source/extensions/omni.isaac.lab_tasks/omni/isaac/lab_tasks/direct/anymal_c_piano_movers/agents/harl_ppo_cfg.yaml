@@ -29,7 +29,7 @@ train:
   # whether to consider the case of truncation when an episode is done
   use_proper_time_limits: True
   # if set, load models from this directory; otherwise, randomly initialise the models
-  model_dir: ~ #/home/jakehate/spot-issaclab/IsaacLab/results/isaaclab/Isaac-Multi-Agent-Flat-Anymal-C-Direct-v0/happo/test/seed-00001-2025-01-23-13-06-09/models
+  model_dir: ~
 eval:
   # whether to use evaluation
   use_eval: True
