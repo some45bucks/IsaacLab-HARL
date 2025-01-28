@@ -111,6 +111,7 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
         )
 
     # simulate environment
+    total_rewards = np.zeros((args['num_envs'], runner.num_agents,1), dtype=np.float32)
     while simulation_app.is_running():
         # run everything in inference mode
         with torch.inference_mode():
@@ -121,7 +122,10 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
                 actions[:, agent_id, :] = action.cpu().numpy()
                 rnn_states[:, agent_id, :] = rnn_state.cpu().numpy()
 
-            obs, _, _, dones, _, _ = runner.env.step(actions)
+            obs, _, rewards, dones, _, _ = runner.env.step(actions)
+            total_rewards += rewards
+            print(f"Average reward: {rewards.mean(axis=0)}")
+            print(f"Total reward: {total_rewards.mean(axis=0)}")
             dones_env = np.all(dones, axis=1)
             masks = np.ones((args['num_envs'], runner.num_agents, 1),dtype=np.float32,)
             masks[dones_env == True] = np.zeros(((dones_env == True).sum(), runner.num_agents, 1), dtype=np.float32)

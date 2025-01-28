@@ -359,13 +359,13 @@ class AnymalCMultiAgent(DirectMARLEnv):
         reward = {}
         for robot_id, robot in self.robots.items():
             # linear velocity tracking
-            lin_vel_error = torch.sum(torch.square(self._commands[robot_id][:, :2] - robot.data.root_lin_vel_b[:, :2]), dim=1)
+            lin_vel_error = torch.sum(torch.square(self._commands[robot_id][:, :2] - self.object.data.root_lin_vel_b[:, :2]), dim=1) #changing this to the bar
             lin_vel_error_mapped = torch.exp(-lin_vel_error / 0.25)
             # yaw rate tracking
-            yaw_rate_error = torch.square(self._commands[robot_id][:, 2] - robot.data.root_ang_vel_b[:, 2])
+            yaw_rate_error = torch.square(self._commands[robot_id][:, 2] - self.object.data.root_ang_vel_b[:, 2])
             yaw_rate_error_mapped = torch.exp(-yaw_rate_error / 0.25)
             # z velocity tracking
-            z_vel_error = torch.square(robot.data.root_lin_vel_b[:, 2])
+            z_vel_error = torch.square(self.object.data.root_lin_vel_b[:, 2])
             # angular velocity x/y
             ang_vel_error = torch.sum(torch.square(robot.data.root_ang_vel_b[:, :2]), dim=1)
             # joint torques
@@ -453,6 +453,8 @@ class AnymalCMultiAgent(DirectMARLEnv):
         # X/Y linear velocity and yaw angular velocity commands
         command = torch.zeros(self.num_envs, 3, device=self.device).uniform_(-1.0, 1.0)
         command[:, 2] = 0.0
+        command[:, 1] = 0.0
+        command[:, 0] = 1.0
         self._commands = {agent : command for agent in self.cfg.possible_agents}
 
         for _, robot in self.robots.items():
