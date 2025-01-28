@@ -105,11 +105,6 @@ class AnymalCEnv(DirectRLEnv):
         observations = {"policy": obs}
         return observations
 
-    def get_y_euler_from_quat(self, quaternion):
-        w, x, y, z = quaternion[:,0], quaternion[:,1], quaternion[:,2], quaternion[:,3]
-        y_euler_angle = torch.arcsin(2 * (w * y - z * x))
-        return y_euler_angle
-
     def _get_rewards(self) -> torch.Tensor:
         # linear velocity tracking
         lin_vel_error = torch.sum(
@@ -154,8 +149,7 @@ class AnymalCEnv(DirectRLEnv):
             "action_rate_l2": action_rate * self.cfg.action_rate_reward_scale * self.step_dt,
             "feet_air_time": air_time * self.cfg.feet_air_time_reward_scale * self.step_dt,
             "undesired_contacts": contacts * self.cfg.undersired_contact_reward_scale * self.step_dt,
-            "flat_bar_roll_angle" : torch.abs(self.get_y_euler_from_quat(self.object.data.root_quat_w))\
-                      * self.cfg.flat_bar_roll_angle_reward_scale * self.step_dt
+            "flat_orientation_l2": flat_orientation * self.cfg.flat_orientation_reward_scale * self.step_dt,
         }
         reward = torch.sum(torch.stack(list(rewards.values())), dim=0)
         # Logging
