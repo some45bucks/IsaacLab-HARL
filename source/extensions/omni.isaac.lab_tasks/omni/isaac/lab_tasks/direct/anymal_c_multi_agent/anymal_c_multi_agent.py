@@ -353,7 +353,12 @@ class AnymalCMultiAgent(DirectMARLEnv):
         # obs = torch.cat(obs, dim=0)
         # observations = {"policy": obs}
         return obs
-
+    
+    def get_y_euler_from_quat(self, quaternion):
+        w, x, y, z = quaternion[:,0], quaternion[:,1], quaternion[:,2], quaternion[:,3]
+        y_euler_angle = torch.arcsin(2 * (w * y - z * x))
+        return y_euler_angle
+    
     def _get_rewards(self) -> dict:
         reward = {}
         for robot_id, robot in self.robots.items():
@@ -399,7 +404,8 @@ class AnymalCMultiAgent(DirectMARLEnv):
                 "feet_air_time": air_time * self.cfg.feet_air_time_reward_scale * self.step_dt,
                 "undesired_contacts": contacts * self.cfg.undersired_contact_reward_scale * self.step_dt,
                 "flat_orientation_l2": flat_orientation * self.cfg.flat_orientation_reward_scale * self.step_dt,
-                "flat_bar_roll_angle" : torch.abs(self.object.data.root_quat_w[:,2]) * self.cfg.flat_bar_roll_angle_reward_scale * self.step_dt
+                "flat_bar_roll_angle" : torch.abs(self.get_y_euler_from_quat(self.object.data.root_quat_w))\
+                      * self.cfg.flat_bar_roll_angle_reward_scale * self.step_dt
             }
             curr_reward = torch.sum(torch.stack(list(rewards.values())), dim=0)
 
