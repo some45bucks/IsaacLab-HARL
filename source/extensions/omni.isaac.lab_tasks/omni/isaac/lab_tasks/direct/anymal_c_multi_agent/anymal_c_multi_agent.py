@@ -188,7 +188,7 @@ class AnymalCMultiAgentFlatEnvCfg(DirectMARLEnvCfg):
     feet_air_time_reward_scale = 0.5
     undersired_contact_reward_scale = -1.0
     flat_orientation_reward_scale = -5.0
-    flat_bar_roll_angle_reward_scale = -10
+    flat_bar_roll_angle_reward_scale = -1.0
 
 
 
@@ -338,8 +338,8 @@ class AnymalCMultiAgent(DirectMARLEnv):
             [
                 tensor
                 for tensor in (
-                    robot.data.root_lin_vel_b,
-                    robot.data.root_ang_vel_b,
+                    robot.data.root_com_lin_vel_b,
+                    robot.data.root_com_ang_vel_b,
                     robot.data.projected_gravity_b,
                     self._commands[robot_id],
                     robot.data.joint_pos - robot.data.default_joint_pos,
@@ -364,15 +364,15 @@ class AnymalCMultiAgent(DirectMARLEnv):
         reward = {}
         for robot_id, robot in self.robots.items():
             # linear velocity tracking
-            lin_vel_error = torch.sum(torch.square(self._commands[robot_id][:, :2] - self.object.data.root_lin_vel_b[:, :2]), dim=1) #changing this to the bar
+            lin_vel_error = torch.sum(torch.square(self._commands[robot_id][:, :2] - self.object.data.root_com_lin_vel_b[:, :2]), dim=1) #changing this to the bar
             lin_vel_error_mapped = torch.exp(-lin_vel_error / 0.25)
             # yaw rate tracking
-            yaw_rate_error = torch.square(self._commands[robot_id][:, 2] - self.object.data.root_ang_vel_b[:, 2])
+            yaw_rate_error = torch.square(self._commands[robot_id][:, 2] - self.object.data.root_com_ang_vel_b[:, 2])
             yaw_rate_error_mapped = torch.exp(-yaw_rate_error / 0.25)
             # z velocity tracking
-            z_vel_error = torch.square(self.object.data.root_lin_vel_b[:, 2])
+            z_vel_error = torch.square(robot.data.root_com_lin_vel_b[:, 2])
             # angular velocity x/y
-            ang_vel_error = torch.sum(torch.square(robot.data.root_ang_vel_b[:, :2]), dim=1)
+            ang_vel_error = torch.sum(torch.square(robot.data.root_com_ang_vel_b[:, :2]), dim=1)
             # joint torques
             joint_torques = torch.sum(torch.square(robot.data.applied_torque), dim=1)
             # joint acceleration
@@ -405,7 +405,7 @@ class AnymalCMultiAgent(DirectMARLEnv):
                 "feet_air_time": air_time * self.cfg.feet_air_time_reward_scale * self.step_dt,
                 "undesired_contacts": contacts * self.cfg.undersired_contact_reward_scale * self.step_dt,
                 "flat_orientation_l2": flat_orientation * self.cfg.flat_orientation_reward_scale * self.step_dt,
-                "flat_bar_roll_angle" : torch.abs(self.get_y_euler_from_quat(self.object.data.root_quat_w))\
+                "flat_bar_roll_angle" : torch.abs(self.get_y_euler_from_quat(self.object.data.root_com_quat_w))\
                       * self.cfg.flat_bar_roll_angle_reward_scale * self.step_dt
             }
             curr_reward = torch.sum(torch.stack(list(rewards.values())), dim=0)
@@ -432,15 +432,20 @@ class AnymalCMultiAgent(DirectMARLEnv):
 
     #TODO: Implement a dones function that handles multiple robots 
     def _get_dones(self) -> tuple[dict, dict]:
-        z_object_pos = self.object.data.root_quat_w[:,2].squeeze()
-        bar_angle_dones = (torch.abs(z_object_pos) > 0.03)
-        # contact_sensor = self.contact_sensors[0]
-        # base_id = self.base_ids[0]
+        y_euler_angle = self.get_y_euler_from_quat(self.object.data.root_com_quat_w) 
+        # if the angle of the bar > pi/64 reset
+        bar_angle_dones = (torch.abs(y_euler_angle) > 0.05)
+
+        # check if the bar has fallen on the ground
+        bar_z_pos = self.object.data.body_com_pos_w[:,:,2].view(-1)
+        bar_fallen = bar_z_pos < 0.2
+
+        dones = torch.logical_or(bar_angle_dones, bar_fallen)
 
         time_out = self.episode_length_buf >= self.max_episode_length - 1
         # net_contact_forces = contact_sensor.data.net_forces_w_history
         # died = torch.any(torch.max(torch.norm(net_contact_forces[:, :, base_id], dim=-1), dim=1)[0] > 1.0, dim=1)
-        return {key:time_out for key in self.robots.keys()}, {key:bar_angle_dones  for key in self.robots.keys()}
+        return {key:time_out for key in self.robots.keys()}, {key:dones  for key in self.robots.keys()}
     
     def _reset_idx(self, env_ids: torch.Tensor | None):
         super()._reset_idx(env_ids)
