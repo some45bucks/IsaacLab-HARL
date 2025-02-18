@@ -148,11 +148,11 @@ class AnymalCMultiAgentFlatEnvCfg(DirectMARLEnvCfg):
         spawn=sim_utils.CuboidCfg( 
             size=(5,.1,.1),
             rigid_props=sim_utils.RigidBodyPropertiesCfg(),
-            mass_props=sim_utils.MassPropertiesCfg(mass=1.0),
+            mass_props=sim_utils.MassPropertiesCfg(mass=.5), # changed from 1.0 to 0.5
             collision_props=sim_utils.CollisionPropertiesCfg(),
             visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(0.0, 1.0, 0.0))
         ),
-        init_state=RigidObjectCfg.InitialStateCfg(pos=(0.0, 0, 1.5), rot=(1.0, 0.0, 0.0, 0.0)),
+        init_state=RigidObjectCfg.InitialStateCfg(pos=(0.0, 0, 0.61), rot=(1.0, 0.0, 0.0, 0.0)), #started the bar lower
     )
 
     # we add a height scanner for perceptive locomotion
@@ -393,7 +393,6 @@ class AnymalCMultiAgent(DirectMARLEnv):
             contacts = torch.sum(is_contact, dim=1)
             # flat orientation
             flat_orientation = torch.sum(torch.square(robot.data.projected_gravity_b[:, :2]), dim=1)
-
             rewards = {
                 "track_lin_vel_xy_exp": lin_vel_error_mapped * self.cfg.lin_vel_reward_scale * self.step_dt,
                 "track_ang_vel_z_exp": yaw_rate_error_mapped * self.cfg.yaw_rate_reward_scale * self.step_dt,
@@ -405,8 +404,8 @@ class AnymalCMultiAgent(DirectMARLEnv):
                 "feet_air_time": air_time * self.cfg.feet_air_time_reward_scale * self.step_dt,
                 "undesired_contacts": contacts * self.cfg.undersired_contact_reward_scale * self.step_dt,
                 "flat_orientation_l2": flat_orientation * self.cfg.flat_orientation_reward_scale * self.step_dt,
-                "flat_bar_roll_angle" : torch.abs(self.get_y_euler_from_quat(self.object.data.root_com_quat_w))\
-                      * self.cfg.flat_bar_roll_angle_reward_scale * self.step_dt
+                # "flat_bar_roll_angle" : torch.abs(self.get_y_euler_from_quat(self.object.data.root_com_quat_w))\
+                #       * self.cfg.flat_bar_roll_angle_reward_scale * self.step_dt
             }
             curr_reward = torch.sum(torch.stack(list(rewards.values())), dim=0)
 
@@ -432,20 +431,20 @@ class AnymalCMultiAgent(DirectMARLEnv):
 
     #TODO: Implement a dones function that handles multiple robots 
     def _get_dones(self) -> tuple[dict, dict]:
-        y_euler_angle = self.get_y_euler_from_quat(self.object.data.root_com_quat_w) 
+        #y_euler_angle = self.get_y_euler_from_quat(self.object.data.root_com_quat_w) 
         # if the angle of the bar > pi/64 reset
-        bar_angle_dones = (torch.abs(y_euler_angle) > 0.05)
+        #bar_angle_dones = (torch.abs(y_euler_angle) > 0.05)
 
         # check if the bar has fallen on the ground
         bar_z_pos = self.object.data.body_com_pos_w[:,:,2].view(-1)
-        bar_fallen = bar_z_pos < 0.2
+        bar_fallen = bar_z_pos < 0.4
 
-        dones = torch.logical_or(bar_angle_dones, bar_fallen)
+        dones = bar_fallen#torch.logical_or(bar_angle_dones, bar_fallen)
 
         time_out = self.episode_length_buf >= self.max_episode_length - 1
         # net_contact_forces = contact_sensor.data.net_forces_w_history
         # died = torch.any(torch.max(torch.norm(net_contact_forces[:, :, base_id], dim=-1), dim=1)[0] > 1.0, dim=1)
-        return {key:time_out for key in self.robots.keys()}, {key:dones  for key in self.robots.keys()}
+        return {key:dones  for key in self.robots.keys()}, {key:time_out for key in self.robots.keys()}
     
     def _reset_idx(self, env_ids: torch.Tensor | None):
         super()._reset_idx(env_ids)
@@ -463,9 +462,9 @@ class AnymalCMultiAgent(DirectMARLEnv):
 
         # X/Y linear velocity and yaw angular velocity commands
         command = torch.zeros(self.num_envs, 3, device=self.device).uniform_(-1.0, 1.0)
-        command[:, 2] = 0.0
-        command[:, 1] = 0.0
-        command[:, 0] = 1.0
+        # command[:, 2] = 0.0
+        # command[:, 1] = 0.0
+        # command[:, 0] = 1.0
         self._commands = {agent : command for agent in self.cfg.possible_agents}
 
         for _, robot in self.robots.items():
