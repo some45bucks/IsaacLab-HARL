@@ -17,6 +17,9 @@ parser.add_argument("--save_interval", type=int, default=None, help="How often t
 parser.add_argument("--log_interval", type=int, default=None, help="How often to log outputs")
 parser.add_argument("--exp_name", type=str, default="test", help="Name of the Experiment")
 parser.add_argument("--num_env_steps", type=int, default=None, help="RL Policy training iterations.")
+parser.add_argument("--dir", type=str, default=None, help="Directory to walking policy for training the multi-agent policy.")
+parser.add_argument("--policy_task", type=str, default=None, help="Name of the task for the pretrained policy.")
+
 parser.add_argument(
         "--algorithm",
         type=str,
@@ -83,6 +86,7 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     args['env'] = 'isaaclab'
     args['algo'] = args['algorithm']
 
+    ### algo args for training the multi agent policy
     algo_args = agent_cfg
 
     algo_args['eval']['use_eval'] = False
@@ -90,10 +94,7 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     algo_args['train']['num_env_steps'] = args['num_env_steps']
     algo_args['train']['eval_interval'] = args['save_interval']
     algo_args['train']['log_interval'] = args['log_interval']
-    if 'dir' in args:
-        algo_args['train']['model_dir'] = args['dir']
-    else:
-        algo_args['train']['model_dir'] = None
+    ### algo args for training the multi agent policy
 
     env_args = {}
     env_cfg.scene.num_envs = args['num_envs']
@@ -107,7 +108,6 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
         "log_dir": os.path.join(algo_args['logger']['log_dir'],"isaaclab",args['task'],args['algorithm'], args["exp_name"], "-".join(["seed-{:0>5}".format(agent_cfg['seed']['seed']), hms_time]), 'videos'),
     }
 
-    #create runner
     runner = RUNNER_REGISTRY[args["algo"]](args, algo_args, env_args)
     runner.run()
     runner.close()

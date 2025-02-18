@@ -297,11 +297,11 @@ class AnymalCHarlWalking(DirectMARLEnv):
         for robot_id, _robot in self.robots.items():
             # linear velocity tracking
             lin_vel_error = torch.sum(
-                torch.square(self._commands[:, :2] - _robot.data.root_com_lin_vel_b[:, :2]), dim=1
+                torch.square(self._commands[robot_id][:, :2] - _robot.data.root_com_lin_vel_b[:, :2]), dim=1
             )
             lin_vel_error_mapped = torch.exp(-lin_vel_error / 0.25)
             # yaw rate tracking
-            yaw_rate_error = torch.square(self._commands[:, 2] - _robot.data.root_com_ang_vel_b[:, 2])
+            yaw_rate_error = torch.square(self._commands[robot_id][:, 2] - _robot.data.root_com_ang_vel_b[:, 2])
             yaw_rate_error_mapped = torch.exp(-yaw_rate_error / 0.25)
             # z velocity tracking
             z_vel_error = torch.square(_robot.data.root_com_lin_vel_b[:, 2])
@@ -317,7 +317,7 @@ class AnymalCHarlWalking(DirectMARLEnv):
             first_contact = self.contact_sensors[robot_id].compute_first_contact(self.step_dt)[:, self.feet_ids[robot_id]]
             last_air_time = self.contact_sensors[robot_id].data.last_air_time[:, self.feet_ids[robot_id]]
             air_time = torch.sum((last_air_time - 0.5) * first_contact, dim=1) * (
-                torch.norm(self._commands[:, :2], dim=1) > 0.1
+                torch.norm(self._commands[robot_id][:, :2], dim=1) > 0.1
             )
             # undersired contacts
             net_contact_forces = self.contact_sensors[robot_id].data.net_forces_w_history
@@ -353,7 +353,7 @@ class AnymalCHarlWalking(DirectMARLEnv):
     def _get_dones(self) -> tuple[dict, dict]:
         dones = []
 
-        for robot_id, _ in self.robots:
+        for robot_id, _ in self.robots.items():
             time_out = self.episode_length_buf >= self.max_episode_length - 1
             net_contact_forces = self.contact_sensors[robot_id].data.net_forces_w_history
             died = torch.any(torch.max(torch.norm(net_contact_forces[:, :, self.base_ids[robot_id]], dim=-1), dim=1)[0] > 1.0, dim=1)
