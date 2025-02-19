@@ -283,7 +283,7 @@ ALGO_ARGS = {
     }
 }
 
-#TODO Figure out how to get laoded moidel to interact correctly with new model
+#TODO Figure out how to get loaded model to interact correctly with new model
 
 class AnymalCMultiAgentWalking(DirectMARLEnv):
     cfg: AnymalCMultiAgentWalkingFlatEnvCfg | AnymalCMultiAgentWalkingRoughEnvCfg
