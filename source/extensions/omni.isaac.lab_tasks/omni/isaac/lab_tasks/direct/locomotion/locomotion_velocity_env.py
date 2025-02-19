@@ -25,6 +25,7 @@ class LocomotionVelocityEnv(DirectRLEnv):
     def __init__(self, cfg: DirectRLEnvCfg, render_mode: str | None = None, **kwargs):
         super().__init__(cfg, render_mode, **kwargs)
 
+        self.commands = torch.zeros(self.num_envs, 3, device=self.device)
         self.action_scale = self.cfg.action_scale
         self.joint_gears = torch.tensor(self.cfg.joint_gears, dtype=torch.float32, device=self.sim.device)
         self.motor_effort_ratio = torch.ones_like(self.joint_gears, device=self.sim.device)
@@ -124,7 +125,10 @@ class LocomotionVelocityEnv(DirectRLEnv):
         return observations
 
     def _get_rewards(self) -> torch.Tensor:
-        total_reward = compute_rewards(
+        total_reward = self.compute_rewards(
+            self.cfg,
+            self.robot,
+            self.commands,
             self.actions,
             self.reset_terminated,
             self.cfg.up_weight,
@@ -142,6 +146,85 @@ class LocomotionVelocityEnv(DirectRLEnv):
             self.cfg.alive_reward_scale,
             self.motor_effort_ratio,
         )
+        return total_reward
+
+    def compute_rewards(
+        self,
+        cfg: DirectRLEnvCfg,
+        robot: Articulation,
+        commands: torch.Tensor,
+        actions: torch.Tensor,
+        reset_terminated: torch.Tensor,
+        up_weight: float,
+        heading_weight: float,
+        heading_proj: torch.Tensor,
+        up_proj: torch.Tensor,
+        dof_vel: torch.Tensor,
+        dof_pos_scaled: torch.Tensor,
+        potentials: torch.Tensor,
+        prev_potentials: torch.Tensor,
+        actions_cost_scale: float,
+        energy_cost_scale: float,
+        dof_vel_scale: float,
+        death_cost: float,
+        alive_reward_scale: float,
+        motor_effort_ratio: torch.Tensor,
+    ):
+        
+        # linear velocity tracking
+        lin_vel_error = torch.sum(
+            torch.square(commands[:, :2] - robot.data.root_com_lin_vel_b[:, :2]), dim=1
+        )
+        lin_vel_error_mapped = torch.exp(-lin_vel_error / 0.25)
+        # yaw rate tracking
+        yaw_rate_error = torch.square(commands[:, 2] - robot.data.root_com_ang_vel_b[:, 2])
+        yaw_rate_error_mapped = torch.exp(-yaw_rate_error / 0.25)
+        # z velocity tracking
+        z_vel_error = torch.square(robot.data.root_com_lin_vel_b[:, 2])
+        # angular velocity x/y
+        ang_vel_error = torch.sum(torch.square(robot.data.root_com_ang_vel_b[:, :2]), dim=1)
+
+        track_lin_vel_xy_exp = lin_vel_error_mapped * cfg.lin_vel_reward_scale * self.step_dt
+        track_ang_vel_z_exp = yaw_rate_error_mapped * cfg.yaw_rate_reward_scale * self.step_dt
+        lin_vel_z_l2 = z_vel_error * cfg.z_vel_reward_scale * self.step_dt
+        ang_vel_xy_l2 = ang_vel_error * cfg.ang_vel_reward_scale * self.step_dt
+
+        heading_weight_tensor = torch.ones_like(heading_proj) * heading_weight
+        heading_reward = torch.where(heading_proj > 0.8, heading_weight_tensor, heading_weight * heading_proj / 0.8)
+
+        # aligning up axis of robot and environment
+        up_reward = torch.zeros_like(heading_reward)
+        up_reward = torch.where(up_proj > 0.93, up_reward + up_weight, up_reward)
+
+        # energy penalty for movement
+        actions_cost = torch.sum(actions**2, dim=-1)
+        electricity_cost = torch.sum(
+            torch.abs(actions * dof_vel * dof_vel_scale) * motor_effort_ratio.unsqueeze(0),
+            dim=-1,
+        )
+
+        # dof at limit cost
+        dof_at_limit_cost = torch.sum(dof_pos_scaled > 0.98, dim=-1)
+
+        # reward for duration of staying alive
+        alive_reward = torch.ones_like(potentials) * alive_reward_scale
+        progress_reward = potentials - prev_potentials
+
+        total_reward = (
+            progress_reward
+            + alive_reward
+            + up_reward
+            + heading_reward
+            - actions_cost_scale * actions_cost
+            - energy_cost_scale * electricity_cost
+            - dof_at_limit_cost
+            + track_ang_vel_z_exp
+            + track_lin_vel_xy_exp
+            + lin_vel_z_l2
+            + ang_vel_xy_l2
+        )
+        # adjust reward for fallen agents
+        total_reward = torch.where(reset_terminated, torch.ones_like(total_reward) * death_cost, total_reward)
         return total_reward
 
     def _get_dones(self) -> tuple[torch.Tensor, torch.Tensor]:
@@ -172,58 +255,7 @@ class LocomotionVelocityEnv(DirectRLEnv):
         self._compute_intermediate_values()
 
 
-@torch.jit.script
-def compute_rewards(
-    actions: torch.Tensor,
-    reset_terminated: torch.Tensor,
-    up_weight: float,
-    heading_weight: float,
-    heading_proj: torch.Tensor,
-    up_proj: torch.Tensor,
-    dof_vel: torch.Tensor,
-    dof_pos_scaled: torch.Tensor,
-    potentials: torch.Tensor,
-    prev_potentials: torch.Tensor,
-    actions_cost_scale: float,
-    energy_cost_scale: float,
-    dof_vel_scale: float,
-    death_cost: float,
-    alive_reward_scale: float,
-    motor_effort_ratio: torch.Tensor,
-):
-    heading_weight_tensor = torch.ones_like(heading_proj) * heading_weight
-    heading_reward = torch.where(heading_proj > 0.8, heading_weight_tensor, heading_weight * heading_proj / 0.8)
 
-    # aligning up axis of robot and environment
-    up_reward = torch.zeros_like(heading_reward)
-    up_reward = torch.where(up_proj > 0.93, up_reward + up_weight, up_reward)
-
-    # energy penalty for movement
-    actions_cost = torch.sum(actions**2, dim=-1)
-    electricity_cost = torch.sum(
-        torch.abs(actions * dof_vel * dof_vel_scale) * motor_effort_ratio.unsqueeze(0),
-        dim=-1,
-    )
-
-    # dof at limit cost
-    dof_at_limit_cost = torch.sum(dof_pos_scaled > 0.98, dim=-1)
-
-    # reward for duration of staying alive
-    alive_reward = torch.ones_like(potentials) * alive_reward_scale
-    progress_reward = potentials - prev_potentials
-
-    total_reward = (
-        progress_reward
-        + alive_reward
-        + up_reward
-        + heading_reward
-        - actions_cost_scale * actions_cost
-        - energy_cost_scale * electricity_cost
-        - dof_at_limit_cost
-    )
-    # adjust reward for fallen agents
-    total_reward = torch.where(reset_terminated, torch.ones_like(total_reward) * death_cost, total_reward)
-    return total_reward
 
 
 @torch.jit.script
