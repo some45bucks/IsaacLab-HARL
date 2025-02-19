@@ -1,6 +1,9 @@
 ![Isaac Lab](docs/source/_static/isaaclab.jpg)
 
 ---
+# For Mult Agent Reinforcement Learning
+
+Use these instructions to install isaac sim -> [here](https://docs.omniverse.nvidia.com/isaacsim/latest/installation/install_python.html#install-isaac-sim-using-pip)
 
 # Isaac Lab
 
