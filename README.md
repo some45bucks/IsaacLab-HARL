@@ -5,6 +5,12 @@
 
 Use these instructions to install isaac sim -> [here](https://docs.omniverse.nvidia.com/isaacsim/latest/installation/install_python.html#install-isaac-sim-using-pip)
 
+Then install the following version of gymnasium, make sure to do all this with  your isaaclab conda env activated.
+
+```bash
+pip install gymnasium==0.29.0
+```
+
 # Isaac Lab
 
 [![IsaacSim](https://img.shields.io/badge/IsaacSim-4.2.0-silver.svg)](https://docs.omniverse.nvidia.com/isaacsim/latest/overview.html)
