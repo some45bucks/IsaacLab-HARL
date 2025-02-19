@@ -118,6 +118,7 @@ class LocomotionVelocityEnv(DirectRLEnv):
                 self.dof_pos_scaled,
                 self.dof_vel * self.cfg.dof_vel_scale,
                 self.actions,
+                self.commands
             ),
             dim=-1,
         )

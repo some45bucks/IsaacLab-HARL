@@ -25,7 +25,7 @@ class H1VelocityEnvCfg(DirectRLEnvCfg):
     decimation = 2
     action_scale = 1.0
     action_space = 19
-    observation_space = 69
+    observation_space = 72
     state_space = 0
 
     # simulation
