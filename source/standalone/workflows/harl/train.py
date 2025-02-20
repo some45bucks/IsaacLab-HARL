@@ -90,10 +90,6 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     algo_args['train']['num_env_steps'] = args['num_env_steps']
     algo_args['train']['eval_interval'] = args['save_interval']
     algo_args['train']['log_interval'] = args['log_interval']
-    if 'dir' in args:
-        algo_args['train']['model_dir'] = args['dir']
-    else:
-        algo_args['train']['model_dir'] = None
 
     env_args = {}
     env_cfg.scene.num_envs = args['num_envs']

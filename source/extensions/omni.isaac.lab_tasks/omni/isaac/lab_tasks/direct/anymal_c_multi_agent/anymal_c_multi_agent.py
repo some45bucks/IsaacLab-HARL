@@ -81,14 +81,14 @@ class EventCfg:
 @configclass
 class AnymalCMultiAgentFlatEnvCfg(DirectMARLEnvCfg):
     # env
-    episode_length_s = 20.0
+    episode_length_s = 100.0
     decimation = 4
     action_scale = 0.5
     action_space = 12
     action_spaces = {f"robot_{i}": 12 for i in range(2)}
     # observation_space = 48
-    observation_space = 235
-    observation_spaces = {f"robot_{i}": 235 for i in range(2)}
+    observation_space = 48
+    observation_spaces = {f"robot_{i}": 48 for i in range(2)}
     state_space = 0
     state_spaces = {f"robot_{i}": 0 for i in range(2)}
     possible_agents = ["robot_0", "robot_1"]
@@ -155,24 +155,24 @@ class AnymalCMultiAgentFlatEnvCfg(DirectMARLEnvCfg):
         init_state=RigidObjectCfg.InitialStateCfg(pos=(0.0, 0, 0.61), rot=(1.0, 0.0, 0.0, 0.0)), #started the bar lower
     )
 
-    # we add a height scanner for perceptive locomotion
-    height_scanner_0 = RayCasterCfg(
-        prim_path="/World/envs/env_.*/Robot_0/base",
-        offset=RayCasterCfg.OffsetCfg(pos=(0.0, 0.0, 20.0)),
-        attach_yaw_only=True,
-        pattern_cfg=patterns.GridPatternCfg(resolution=0.1, size=[1.6, 1.0]),
-        debug_vis=True,
-        mesh_prim_paths=["/World/ground"],
-    )
+    # # we add a height scanner for perceptive locomotion
+    # height_scanner_0 = RayCasterCfg(
+    #     prim_path="/World/envs/env_.*/Robot_0/base",
+    #     offset=RayCasterCfg.OffsetCfg(pos=(0.0, 0.0, 20.0)),
+    #     attach_yaw_only=True,
+    #     pattern_cfg=patterns.GridPatternCfg(resolution=0.1, size=[1.6, 1.0]),
+    #     debug_vis=True,
+    #     mesh_prim_paths=["/World/ground"],
+    # )
 
-    height_scanner_1 = RayCasterCfg(
-        prim_path="/World/envs/env_.*/Robot_1/base",
-        offset=RayCasterCfg.OffsetCfg(pos=(0.0, 0.0, 20.0)),
-        attach_yaw_only=True,
-        pattern_cfg=patterns.GridPatternCfg(resolution=0.1, size=[1.6, 1.0]),
-        debug_vis=True,
-        mesh_prim_paths=["/World/ground"],
-    )
+    # height_scanner_1 = RayCasterCfg(
+    #     prim_path="/World/envs/env_.*/Robot_1/base",
+    #     offset=RayCasterCfg.OffsetCfg(pos=(0.0, 0.0, 20.0)),
+    #     attach_yaw_only=True,
+    #     pattern_cfg=patterns.GridPatternCfg(resolution=0.1, size=[1.6, 1.0]),
+    #     debug_vis=True,
+    #     mesh_prim_paths=["/World/ground"],
+    # )
 
     # reward scales (override from flat config)
     flat_orientation_reward_scale = 0.0
@@ -190,12 +190,15 @@ class AnymalCMultiAgentFlatEnvCfg(DirectMARLEnvCfg):
     flat_orientation_reward_scale = -5.0
     flat_bar_roll_angle_reward_scale = -1.0
 
+    bar_z_min_pos = 0.4
+    bar_fallen_reward = -1000
+
 
 
 @configclass
 class AnymalCMultiAgentRoughEnvCfg(AnymalCMultiAgentFlatEnvCfg):
     # env
-    observation_space = 235
+    observation_space = 48
 
     terrain = TerrainImporterCfg(
         prim_path="/World/ground",
@@ -216,24 +219,24 @@ class AnymalCMultiAgentRoughEnvCfg(AnymalCMultiAgentFlatEnvCfg):
         debug_vis=False,
     )
 
-    # we add a height scanner for perceptive locomotion
-    height_scanner_0 = RayCasterCfg(
-        prim_path="/World/envs/env_.*/Robot_0/base",
-        offset=RayCasterCfg.OffsetCfg(pos=(0.0, 0.0, 20.0)),
-        attach_yaw_only=True,
-        pattern_cfg=patterns.GridPatternCfg(resolution=0.1, size=[1.6, 1.0]),
-        debug_vis=False,
-        mesh_prim_paths=["/World/ground"],
-    )
+    # # we add a height scanner for perceptive locomotion
+    # height_scanner_0 = RayCasterCfg(
+    #     prim_path="/World/envs/env_.*/Robot_0/base",
+    #     offset=RayCasterCfg.OffsetCfg(pos=(0.0, 0.0, 20.0)),
+    #     attach_yaw_only=True,
+    #     pattern_cfg=patterns.GridPatternCfg(resolution=0.1, size=[1.6, 1.0]),
+    #     debug_vis=False,
+    #     mesh_prim_paths=["/World/ground"],
+    # )
 
-    height_scanner_1 = RayCasterCfg(
-        prim_path="/World/envs/env_.*/Robot_1/base",
-        offset=RayCasterCfg.OffsetCfg(pos=(0.0, 0.0, 20.0)),
-        attach_yaw_only=True,
-        pattern_cfg=patterns.GridPatternCfg(resolution=0.1, size=[1.6, 1.0]),
-        debug_vis=False,
-        mesh_prim_paths=["/World/ground"],
-    )
+    # height_scanner_1 = RayCasterCfg(
+    #     prim_path="/World/envs/env_.*/Robot_1/base",
+    #     offset=RayCasterCfg.OffsetCfg(pos=(0.0, 0.0, 20.0)),
+    #     attach_yaw_only=True,
+    #     pattern_cfg=patterns.GridPatternCfg(resolution=0.1, size=[1.6, 1.0]),
+    #     debug_vis=False,
+    #     mesh_prim_paths=["/World/ground"],
+    # )
 
     # reward scales (override from flat config)
     flat_orientation_reward_scale = 0.0
@@ -247,7 +250,6 @@ class AnymalCMultiAgent(DirectMARLEnv):
         # Joint position command (deviation from default joint positions)
         self.actions = {agent : torch.zeros(self.num_envs, action_space, device=self.device) for agent, action_space in self.cfg.action_spaces.items()}
         self.previous_actions = {agent : torch.zeros(self.num_envs, action_space, device=self.device) for agent, action_space in self.cfg.action_spaces.items()}
-
         # X/Y linear velocity and yaw angular velocity commands
         self._commands = {agent : torch.zeros(self.num_envs, 3, device=self.device) for agent in self.cfg.possible_agents}
 
@@ -265,7 +267,8 @@ class AnymalCMultiAgent(DirectMARLEnv):
                 "feet_air_time",
                 "undesired_contacts",
                 "flat_orientation_l2",
-                "flat_bar_roll_angle"
+                "flat_bar_roll_angle",
+                "bar_fallen_reward"
             ]
         }
 
@@ -295,8 +298,8 @@ class AnymalCMultiAgent(DirectMARLEnv):
             self.scene.articulations[f"robot_{i}"] = self.robots[f"robot_{i}"]
             self.contact_sensors[f"robot_{i}"] = ContactSensor(self.cfg.__dict__["contact_sensor_" + str(i)])
             self.scene.sensors[f"robot_{i}"] = self.contact_sensors[f"robot_{i}"]
-            self.height_scanners[f"robot_{i}"] = RayCaster(self.cfg.__dict__["height_scanner_" + str(i)])
-            self.scene.sensors[f"robot_{i}"] = self.height_scanners[f"robot_{i}"]
+            # self.height_scanners[f"robot_{i}"] = RayCaster(self.cfg.__dict__["height_scanner_" + str(i)])
+            # self.scene.sensors[f"robot_{i}"] = self.height_scanners[f"robot_{i}"]
 
         self.cfg.terrain.num_envs = self.scene.cfg.num_envs
         self.cfg.terrain.env_spacing = self.scene.cfg.env_spacing
@@ -323,13 +326,13 @@ class AnymalCMultiAgent(DirectMARLEnv):
     def _get_observations(self) -> dict:
         self.previous_actions = copy.deepcopy(self.actions)
         height_datas = {}
-        for robot_id, robot in self.robots.items():
-            height_data = None
-            # if isinstance(self.cfg, AnymalCMultiAgentWalkingRoughEnvCfg):
-            height_data = (
-                self.height_scanners[robot_id].data.pos_w[:, 2].unsqueeze(1) - self.height_scanners[robot_id].data.ray_hits_w[..., 2] - 0.5
-            ).clip(-1.0, 1.0)
-            height_datas[robot_id] = (height_data)
+        # for robot_id, robot in self.robots.items():
+        #     height_data = None
+        #     # if isinstance(self.cfg, AnymalCMultiAgentWalkingRoughEnvCfg):
+        #     height_data = (
+        #         self.height_scanners[robot_id].data.pos_w[:, 2].unsqueeze(1) - self.height_scanners[robot_id].data.ray_hits_w[..., 2] - 0.5
+        #     ).clip(-1.0, 1.0)
+        #     height_datas[robot_id] = (height_data)
 
         
         obs = {}
@@ -344,7 +347,7 @@ class AnymalCMultiAgent(DirectMARLEnv):
                     self._commands[robot_id],
                     robot.data.joint_pos - robot.data.default_joint_pos,
                     robot.data.joint_vel,
-                    height_datas[robot_id],
+                    # height_datas[robot_id],
                     self.actions[robot_id],
                 )
                 if tensor is not None
@@ -362,6 +365,10 @@ class AnymalCMultiAgent(DirectMARLEnv):
     
     def _get_rewards(self) -> dict:
         reward = {}
+        bar_z_pos = self.object.data.body_com_pos_w[:,:,2].view(-1)
+        bar_fallen = bar_z_pos < self.cfg.bar_z_min_pos
+        bar_fallen_reward = bar_fallen * self.cfg.bar_fallen_reward
+
         for robot_id, robot in self.robots.items():
             # linear velocity tracking
             lin_vel_error = torch.sum(torch.square(self._commands[robot_id][:, :2] - self.object.data.root_com_lin_vel_b[:, :2]), dim=1) #changing this to the bar
@@ -404,16 +411,17 @@ class AnymalCMultiAgent(DirectMARLEnv):
                 "feet_air_time": air_time * self.cfg.feet_air_time_reward_scale * self.step_dt,
                 "undesired_contacts": contacts * self.cfg.undersired_contact_reward_scale * self.step_dt,
                 "flat_orientation_l2": flat_orientation * self.cfg.flat_orientation_reward_scale * self.step_dt,
-                # "flat_bar_roll_angle" : torch.abs(self.get_y_euler_from_quat(self.object.data.root_com_quat_w))\
-                #       * self.cfg.flat_bar_roll_angle_reward_scale * self.step_dt
+                "flat_bar_roll_angle" : torch.abs(self.get_y_euler_from_quat(self.object.data.root_com_quat_w))\
+                      * self.cfg.flat_bar_roll_angle_reward_scale * self.step_dt,
+                "bar_fallen_reward" : bar_fallen_reward
             }
             curr_reward = torch.sum(torch.stack(list(rewards.values())), dim=0)
 
             reward[robot_id] = curr_reward
 
         # Logging
-        for key, value in rewards.items():
-            self._episode_sums[key] += value
+        # for key, value in reward.items():
+        #     self._episode_sums[key] += value
 
         return reward
 
@@ -437,7 +445,7 @@ class AnymalCMultiAgent(DirectMARLEnv):
 
         # check if the bar has fallen on the ground
         bar_z_pos = self.object.data.body_com_pos_w[:,:,2].view(-1)
-        bar_fallen = bar_z_pos < 0.4
+        bar_fallen = bar_z_pos < self.cfg.bar_z_min_pos
 
         dones = bar_fallen#torch.logical_or(bar_angle_dones, bar_fallen)
 
@@ -461,10 +469,11 @@ class AnymalCMultiAgent(DirectMARLEnv):
         self.previous_actions = {agent : torch.zeros(self.num_envs, action_space, device=self.device) for agent, action_space in self.cfg.action_spaces.items()}
 
         # X/Y linear velocity and yaw angular velocity commands
-        command = torch.zeros(self.num_envs, 3, device=self.device).uniform_(-1.0, 1.0)
+        # command = torch.zeros(self.num_envs, 3, device=self.device).uniform_(-1.0, 1.0)
+        command = torch.zeros(self.num_envs, 3, device=self.device)
         # command[:, 2] = 0.0
-        # command[:, 1] = 0.0
-        # command[:, 0] = 1.0
+        # command[:, 1] = 1.0
+        command[:, 0] = 1.0
         self._commands = {agent : command for agent in self.cfg.possible_agents}
 
         for _, robot in self.robots.items():

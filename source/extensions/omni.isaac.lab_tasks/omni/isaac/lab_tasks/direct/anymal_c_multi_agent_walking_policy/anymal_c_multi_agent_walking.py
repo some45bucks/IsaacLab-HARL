@@ -160,23 +160,23 @@ class AnymalCMultiAgentWalkingFlatEnvCfg(DirectMARLEnvCfg):
     )
 
     # we add a height scanner for perceptive locomotion
-    height_scanner_0 = RayCasterCfg(
-        prim_path="/World/envs/env_.*/Robot_0/base",
-        offset=RayCasterCfg.OffsetCfg(pos=(0.0, 0.0, 20.0)),
-        attach_yaw_only=True,
-        pattern_cfg=patterns.GridPatternCfg(resolution=0.1, size=[1.6, 1.0]),
-        debug_vis=True,
-        mesh_prim_paths=["/World/ground"],
-    )
+    # height_scanner_0 = RayCasterCfg(
+    #     prim_path="/World/envs/env_.*/Robot_0/base",
+    #     offset=RayCasterCfg.OffsetCfg(pos=(0.0, 0.0, 20.0)),
+    #     attach_yaw_only=True,
+    #     pattern_cfg=patterns.GridPatternCfg(resolution=0.1, size=[1.6, 1.0]),
+    #     debug_vis=True,
+    #     mesh_prim_paths=["/World/ground"],
+    # )
 
-    height_scanner_1 = RayCasterCfg(
-        prim_path="/World/envs/env_.*/Robot_1/base",
-        offset=RayCasterCfg.OffsetCfg(pos=(0.0, 0.0, 20.0)),
-        attach_yaw_only=True,
-        pattern_cfg=patterns.GridPatternCfg(resolution=0.1, size=[1.6, 1.0]),
-        debug_vis=True,
-        mesh_prim_paths=["/World/ground"],
-    )
+    # height_scanner_1 = RayCasterCfg(
+    #     prim_path="/World/envs/env_.*/Robot_1/base",
+    #     offset=RayCasterCfg.OffsetCfg(pos=(0.0, 0.0, 20.0)),
+    #     attach_yaw_only=True,
+    #     pattern_cfg=patterns.GridPatternCfg(resolution=0.1, size=[1.6, 1.0]),
+    #     debug_vis=True,
+    #     mesh_prim_paths=["/World/ground"],
+    # )
 
     # reward scales (override from flat config)
     flat_orientation_reward_scale = 0.0
