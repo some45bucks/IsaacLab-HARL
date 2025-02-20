@@ -212,10 +212,10 @@ class LocomotionVelocityEnv(DirectRLEnv):
         progress_reward = potentials - prev_potentials
 
         total_reward = (
-            progress_reward
-            + alive_reward
+            # progress_reward +
+            alive_reward
             + up_reward
-            + heading_reward
+            # + heading_reward
             - actions_cost_scale * actions_cost
             - energy_cost_scale * electricity_cost
             - dof_at_limit_cost
