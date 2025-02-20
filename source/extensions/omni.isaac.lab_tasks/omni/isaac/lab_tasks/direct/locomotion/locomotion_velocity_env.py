@@ -176,10 +176,10 @@ class LocomotionVelocityEnv(DirectRLEnv):
         lin_vel_error = torch.sum(
             torch.square(commands[:, :2] - robot.data.root_com_lin_vel_b[:, :2]), dim=1
         )
-        lin_vel_error_mapped = torch.exp(-lin_vel_error / 0.25)
+        lin_vel_error_mapped = torch.exp(-lin_vel_error)
         # yaw rate tracking
         yaw_rate_error = torch.square(commands[:, 2] - robot.data.root_com_ang_vel_b[:, 2])
-        yaw_rate_error_mapped = torch.exp(-yaw_rate_error / 0.25)
+        yaw_rate_error_mapped = torch.exp(-yaw_rate_error)
         # z velocity tracking
         z_vel_error = torch.square(robot.data.root_com_lin_vel_b[:, 2])
         # angular velocity x/y
@@ -240,7 +240,10 @@ class LocomotionVelocityEnv(DirectRLEnv):
         self.robot.reset(env_ids)
         super()._reset_idx(env_ids)
 
-        self.commands[env_ids] = torch.zeros_like(self.commands[env_ids]).uniform_(-1.0, 1.0)
+        # self.commands[env_ids] = torch.zeros_like(self.commands[env_ids]).uniform_(-1.0, 1.0)
+        self.commands[env_ids] = torch.zeros_like(self.commands[env_ids])
+        self.commands[:,0] = 1.0
+
 
         joint_pos = self.robot.data.default_joint_pos[env_ids]
         joint_vel = self.robot.data.default_joint_vel[env_ids]
