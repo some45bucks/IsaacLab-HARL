@@ -84,8 +84,8 @@ class H1VelocityEnvCfg(DirectRLEnvCfg):
     angular_velocity_scale: float = 0.25
     contact_force_scale: float = 0.01
 
-    lin_vel_reward_scale = 1.0
-    yaw_rate_reward_scale = 0.5
+    lin_vel_reward_scale = -2.0
+    yaw_rate_reward_scale = -0.5
     z_vel_reward_scale = -2.0
     ang_vel_reward_scale = -0.05
     joint_torque_reward_scale = -2.5e-5

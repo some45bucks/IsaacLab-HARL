@@ -176,19 +176,17 @@ class LocomotionVelocityEnv(DirectRLEnv):
         lin_vel_error = torch.sum(
             torch.square(commands[:, :2] - robot.data.root_com_lin_vel_b[:, :2]), dim=1
         )
-        lin_vel_error_mapped = torch.exp(-lin_vel_error)
         # yaw rate tracking
         yaw_rate_error = torch.square(commands[:, 2] - robot.data.root_com_ang_vel_b[:, 2])
-        yaw_rate_error_mapped = torch.exp(-yaw_rate_error)
         # z velocity tracking
         z_vel_error = torch.square(robot.data.root_com_lin_vel_b[:, 2])
         # angular velocity x/y
         ang_vel_error = torch.sum(torch.square(robot.data.root_com_ang_vel_b[:, :2]), dim=1)
 
-        track_lin_vel_xy_exp = lin_vel_error_mapped * cfg.lin_vel_reward_scale * self.step_dt
-        track_ang_vel_z_exp = yaw_rate_error_mapped * cfg.yaw_rate_reward_scale * self.step_dt
-        lin_vel_z_l2 = z_vel_error * cfg.z_vel_reward_scale * self.step_dt
-        ang_vel_xy_l2 = ang_vel_error * cfg.ang_vel_reward_scale * self.step_dt
+        track_lin_vel_xy_exp = lin_vel_error * cfg.lin_vel_reward_scale
+        track_ang_vel_z_exp = yaw_rate_error * cfg.yaw_rate_reward_scale
+        lin_vel_z_l2 = z_vel_error * cfg.z_vel_reward_scale
+        ang_vel_xy_l2 = ang_vel_error * cfg.ang_vel_reward_scale
 
         heading_weight_tensor = torch.ones_like(heading_proj) * heading_weight
         heading_reward = torch.where(heading_proj > 0.8, heading_weight_tensor, heading_weight * heading_proj / 0.8)
@@ -240,9 +238,9 @@ class LocomotionVelocityEnv(DirectRLEnv):
         self.robot.reset(env_ids)
         super()._reset_idx(env_ids)
 
-        # self.commands[env_ids] = torch.zeros_like(self.commands[env_ids]).uniform_(-1.0, 1.0)
-        self.commands[env_ids] = torch.zeros_like(self.commands[env_ids])
-        self.commands[:,0] = 1.0
+        self.commands[env_ids] = torch.zeros_like(self.commands[env_ids]).uniform_(-1.0, 1.0)
+        # self.commands[env_ids] = torch.zeros_like(self.commands[env_ids])
+        # self.commands[:,2] = 0.0
 
 
         joint_pos = self.robot.data.default_joint_pos[env_ids]
