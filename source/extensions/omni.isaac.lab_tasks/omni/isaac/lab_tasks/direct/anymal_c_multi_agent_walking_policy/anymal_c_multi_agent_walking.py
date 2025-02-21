@@ -28,6 +28,10 @@ import copy
 from omni.isaac.lab_assets.anymal import ANYMAL_C_CFG  # isort: skip
 from omni.isaac.lab.terrains.config.rough import ROUGH_TERRAINS_CFG  # isort: skip
 
+"""
+THESE WILL NOT WORK IN OTHER RL LIBS. THIS IS HARL ONLY!!!
+"""
+from harl.algorithms.actors import ALGO_REGISTRY
 
 @configclass
 class EventCfg:
@@ -156,23 +160,23 @@ class AnymalCMultiAgentWalkingFlatEnvCfg(DirectMARLEnvCfg):
     )
 
     # we add a height scanner for perceptive locomotion
-    height_scanner_0 = RayCasterCfg(
-        prim_path="/World/envs/env_.*/Robot_0/base",
-        offset=RayCasterCfg.OffsetCfg(pos=(0.0, 0.0, 20.0)),
-        attach_yaw_only=True,
-        pattern_cfg=patterns.GridPatternCfg(resolution=0.1, size=[1.6, 1.0]),
-        debug_vis=True,
-        mesh_prim_paths=["/World/ground"],
-    )
+    # height_scanner_0 = RayCasterCfg(
+    #     prim_path="/World/envs/env_.*/Robot_0/base",
+    #     offset=RayCasterCfg.OffsetCfg(pos=(0.0, 0.0, 20.0)),
+    #     attach_yaw_only=True,
+    #     pattern_cfg=patterns.GridPatternCfg(resolution=0.1, size=[1.6, 1.0]),
+    #     debug_vis=True,
+    #     mesh_prim_paths=["/World/ground"],
+    # )
 
-    height_scanner_1 = RayCasterCfg(
-        prim_path="/World/envs/env_.*/Robot_1/base",
-        offset=RayCasterCfg.OffsetCfg(pos=(0.0, 0.0, 20.0)),
-        attach_yaw_only=True,
-        pattern_cfg=patterns.GridPatternCfg(resolution=0.1, size=[1.6, 1.0]),
-        debug_vis=True,
-        mesh_prim_paths=["/World/ground"],
-    )
+    # height_scanner_1 = RayCasterCfg(
+    #     prim_path="/World/envs/env_.*/Robot_1/base",
+    #     offset=RayCasterCfg.OffsetCfg(pos=(0.0, 0.0, 20.0)),
+    #     attach_yaw_only=True,
+    #     pattern_cfg=patterns.GridPatternCfg(resolution=0.1, size=[1.6, 1.0]),
+    #     debug_vis=True,
+    #     mesh_prim_paths=["/World/ground"],
+    # )
 
     # reward scales (override from flat config)
     flat_orientation_reward_scale = 0.0
@@ -238,6 +242,48 @@ class AnymalCMultiAgentWalkingRoughEnvCfg(AnymalCMultiAgentWalkingFlatEnvCfg):
     # reward scales (override from flat config)
     flat_orientation_reward_scale = 0.0
 
+ALGO_ARGS = {
+    "model": {
+        "hidden_sizes": [8, 8],
+        "activation_func": "relu",
+        "use_feature_normalization": True,
+        "initialization_method": "orthogonal_",
+        "gain": 0.01,
+        "use_naive_recurrent_policy": False,
+        "use_recurrent_policy": True,
+        "recurrent_n": 1,
+        "data_chunk_length": 10,
+        "lr": 0.0005,
+        "critic_lr": 0.0005,
+        "opti_eps": 0.00001,
+        "weight_decay": 0,
+        "std_x_coef": 1,
+        "std_y_coef": 0.5,
+    },
+    "algo": {
+        "ppo_epoch": 5,
+        "critic_epoch": 5,
+        "use_clipped_value_loss": True,
+        "clip_param": 0.2,
+        "actor_num_mini_batch": 1,
+        "critic_num_mini_batch": 1,
+        "entropy_coef": 0.01,
+        "value_loss_coef": 1,
+        "use_max_grad_norm": True,
+        "max_grad_norm": 10.0,
+        "use_gae": True,
+        "gamma": 0.99,
+        "gae_lambda": 0.95,
+        "use_huber_loss": True,
+        "use_policy_active_masks": True,
+        "huber_delta": 10.0,
+        "action_aggregation": "prod",
+        "share_param": False,
+        "fixed_order": False,
+    }
+}
+
+#TODO Figure out how to get loaded model to interact correctly with new model
 
 class AnymalCMultiAgentWalking(DirectMARLEnv):
     cfg: AnymalCMultiAgentWalkingFlatEnvCfg | AnymalCMultiAgentWalkingRoughEnvCfg
@@ -245,6 +291,9 @@ class AnymalCMultiAgentWalking(DirectMARLEnv):
     def __init__(self, cfg: AnymalCMultiAgentWalkingFlatEnvCfg | AnymalCMultiAgentWalkingRoughEnvCfg, render_mode: str | None = None, **kwargs):
         super().__init__(cfg, render_mode, **kwargs)
         # Joint position command (deviation from default joint positions)
+        #model dir
+        self.model_dir = "/home/jakehate/spot-issaclab/IsaacLab/source/standalone/workflows/harl/results/isaaclab/Isaac-Harl-Walking-Flat-Anymal-C-Direct-v0/happo/test/seed-00001-2025-02-18-16-11-20/models"
+
         self.actions = {agent : torch.zeros(self.num_envs, action_space, device=self.device) for agent, action_space in self.cfg.action_spaces.items()}
         self.previous_actions = {agent : torch.zeros(self.num_envs, action_space, device=self.device) for agent, action_space in self.cfg.action_spaces.items()}
 
@@ -280,6 +329,23 @@ class AnymalCMultiAgentWalking(DirectMARLEnv):
             self.base_ids[robot_id] = _base_id
             self.feet_ids[robot_id] = _feet_ids
             self.undesired_body_contact_ids[robot_id] = _undesired_contact_body_ids
+
+        # load in model
+        self.move_model = {}
+        for robot_id, robot in self.robots.items():
+                agent = ALGO_REGISTRY["happo"](
+                    {**ALGO_ARGS["model"], **ALGO_ARGS["algo"]},
+                    self.cfg.observation_space,
+                    self.cfg.action_space,
+                    device=self.device,
+                )
+                self.move_model[robot_id] = agent
+
+        for robot_id, robot in self.robots.items():
+            policy_actor_state_dict = torch.load(
+                self.model_dir + "/actor_agent" + "0" + ".pt"
+            )
+            self.move_model[robot_id].actor.load_state_dict(policy_actor_state_dict)
 
     def _setup_scene(self):
         self.num_robots = sum(1 for key in self.cfg.__dict__.keys() if "robot_" in key)

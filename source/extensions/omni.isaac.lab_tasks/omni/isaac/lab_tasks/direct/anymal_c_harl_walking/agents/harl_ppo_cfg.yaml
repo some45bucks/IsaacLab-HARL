@@ -29,10 +29,10 @@ train:
   # whether to consider the case of truncation when an episode is done
   use_proper_time_limits: True
   # if set, load models from this directory; otherwise, randomly initialise the models
-  # model_dir: /home/jakehate/spot-issaclab/IsaacLab/results/isaaclab/Isaac-Multi-Agent-Flat-Anymal-C-Direct-v0/happo/test/seed-00001-2025-01-30-10-42-38/models
+  model_dir: /home/jakehate/spot-issaclab/IsaacLab/results/isaaclab/Isaac-Velocity-Flat-Anymal-C-Direct-v0/happo/test/seed-00001-2025-02-11-12-37-09/models_multi
 eval:
   # whether to use evaluation
-  use_eval: True
+  use_eval: False
   # number of parallel environments for evaluation
   n_eval_rollout_threads: 10
   # number of episodes per evaluation
