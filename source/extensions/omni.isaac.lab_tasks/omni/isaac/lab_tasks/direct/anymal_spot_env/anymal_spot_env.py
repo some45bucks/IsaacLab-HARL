@@ -21,7 +21,8 @@ from omni.isaac.lab.terrains import TerrainImporterCfg
 from omni.isaac.lab.utils import configclass
 from omni.isaac.lab.utils.assets import ISAAC_NUCLEUS_DIR
 import copy
-
+from omni.isaac.core.utils.torch.rotations import compute_heading_and_up, compute_rot, quat_conjugate
+import omni.isaac.core.utils.torch as torch_utils
 ##
 # Pre-defined configs
 ##
@@ -29,6 +30,9 @@ from omni.isaac.lab_assets.anymal import ANYMAL_C_CFG  # isort: skip
 from omni.isaac.lab_assets.spot import SPOT_CFG  # isort: skip
 from omni.isaac.lab.terrains.config.rough import ROUGH_TERRAINS_CFG  # isort: skip
 
+
+def normalize_angle(x):
+    return torch.atan2(torch.sin(x), torch.cos(x))
 
 @configclass
 class EventCfg:
@@ -133,17 +137,8 @@ class HeterogeneousMultiAgentFlatEnvCfg(DirectMARLEnvCfg):
     robot_0.init_state.rot = (1.0, 0.0, 0.0, 1)
     robot_0.init_state.pos = (-1.0, 0.0, .5)
 
-    height_scanner_0 = RayCasterCfg(
-        prim_path="/World/envs/env_.*/Robot_0/base",
-        offset=RayCasterCfg.OffsetCfg(pos=(0.0, 0.0, 20.0)),
-        attach_yaw_only=True,
-        pattern_cfg=patterns.GridPatternCfg(resolution=0.1, size=[1.6, 1.0]),
-        debug_vis=True,
-        mesh_prim_paths=["/World/ground"],
-    )
-
     action_spaces['robot_0'] = 12
-    observation_spaces['robot_0'] = 235
+    observation_spaces['robot_0'] = 48
     state_spaces['robot_0'] = 0
     possible_agents.append('robot_0')
 
@@ -310,7 +305,17 @@ class HeterogeneousMultiAgent(DirectMARLEnv):
         _undesired_contact_body_ids, _ = contact_sensor.find_bodies(".*hip")
         self.base_ids[robot_id] = _base_id
         self.feet_ids[robot_id] = _feet_ids
-        self.undesired_body_contact_ids[robot_id] = _undesired_contact_body_ids     
+        self.undesired_body_contact_ids[robot_id] = _undesired_contact_body_ids    
+
+        self.targets = torch.tensor([1000, 0, 0], dtype=torch.float32, device=self.sim.device).repeat(
+            (self.num_envs, 1)
+        )
+        self.targets += self.scene.env_origins
+
+        self.start_rotation = torch.tensor([1, 0, 0, 0], device=self.sim.device, dtype=torch.float32)
+        self.inv_start_rot = quat_conjugate(self.start_rotation).repeat((self.num_envs, 1))
+        self.basis_vec0 = self.heading_vec.clone()
+        self.basis_vec1 = self.up_vec.clone()
 
     def _setup_scene(self):
         self.num_robots = sum(1 for key in self.cfg.__dict__.keys() if "robot_" in key)
@@ -380,9 +385,69 @@ class HeterogeneousMultiAgent(DirectMARLEnv):
             ],
             dim=-1,
             ))
+
+        robotId = "robot_1"
+        robot_1 = self.robots[robot_id]
+        vel_loc, angvel_loc, roll, pitch, yaw, angle_to_target = compute_rot(
+        torso_quat, velocity, ang_velocity, targets, torso_position
+        )
+        obs[robot_id] = torch.cat(
+            (
+                self.torso_position[:, 2].view(-1, 1),
+                self.vel_loc,
+                self.angvel_loc * self.cfg.angular_velocity_scale,
+                normalize_angle(self.yaw).unsqueeze(-1),
+                normalize_angle(self.roll).unsqueeze(-1),
+                normalize_angle(self.angle_to_target).unsqueeze(-1),
+                self.up_proj.unsqueeze(-1),
+                self.heading_proj.unsqueeze(-1),
+                self.dof_pos_scaled,
+                self.dof_vel * self.cfg.dof_vel_scale,
+                self.actions,
+                self.commands
+            ),
+            dim=-1,
+        )
         # obs = torch.cat(obs, dim=0)
         # observations = {"policy": obs}
         return obs
+    
+
+    def _compute_intermediate_values(self):
+        self.torso_position, self.torso_rotation = self.robots["robot_1"].data.root_link_pos_w, self.robots["robot_1"].data.root_link_quat_w
+        self.velocity, self.ang_velocity = self.robots["robot_1"].data.root_com_lin_vel_w, self.robots["robot_1"].data.root_com_ang_vel_w
+        self.dof_pos, self.dof_vel = self.robots["robot_1"].data.joint_pos, self.robots["robot_1"].data.joint_vel
+
+        (
+            self.up_proj,
+            self.heading_proj,
+            self.up_vec,
+            self.heading_vec,
+            self.vel_loc,
+            self.angvel_loc,
+            self.roll,
+            self.pitch,
+            self.yaw,
+            self.angle_to_target,
+            self.dof_pos_scaled,
+            self.prev_potentials,
+            self.potentials,
+        ) = compute_intermediate_values(
+            self.targets,
+            self.torso_position,
+            self.torso_rotation,
+            self.velocity,
+            self.ang_velocity,
+            self.dof_pos,
+            self.robots["robot_1"].data.soft_joint_pos_limits[0, :, 0],
+            self.robots["robot_1"].data.soft_joint_pos_limits[0, :, 1],
+            self.inv_start_rot,
+            self.basis_vec0,
+            self.basis_vec1,
+            self.potentials,
+            self.prev_potentials,
+            self.cfg.sim.dt,
+        )
     
     def get_y_euler_from_quat(self, quaternion):
         w, x, y, z = quaternion[:,0], quaternion[:,1], quaternion[:,2], quaternion[:,3]
@@ -522,3 +587,53 @@ class HeterogeneousMultiAgent(DirectMARLEnv):
             # extras["Episode_Termination/time_out"] = torch.count_nonzero(self.reset_time_outs[env_ids]).item()
             self.extras["log"].update(extras)
     
+
+@torch.jit.script
+def compute_intermediate_values(
+    targets: torch.Tensor,
+    torso_position: torch.Tensor,
+    torso_rotation: torch.Tensor,
+    velocity: torch.Tensor,
+    ang_velocity: torch.Tensor,
+    dof_pos: torch.Tensor,
+    dof_lower_limits: torch.Tensor,
+    dof_upper_limits: torch.Tensor,
+    inv_start_rot: torch.Tensor,
+    basis_vec0: torch.Tensor,
+    basis_vec1: torch.Tensor,
+    potentials: torch.Tensor,
+    prev_potentials: torch.Tensor,
+    dt: float,
+):
+    to_target = targets - torso_position
+    to_target[:, 2] = 0.0
+    torso_quat, up_proj, heading_proj, up_vec, heading_vec = compute_heading_and_up(
+        torso_rotation, inv_start_rot, to_target, basis_vec0, basis_vec1, 2
+    )
+
+    vel_loc, angvel_loc, roll, pitch, yaw, angle_to_target = compute_rot(
+        torso_quat, velocity, ang_velocity, targets, torso_position
+    )
+
+    dof_pos_scaled = torch_utils.maths.unscale(dof_pos, dof_lower_limits, dof_upper_limits)
+
+    to_target = targets - torso_position
+    to_target[:, 2] = 0.0
+    prev_potentials[:] = potentials
+    potentials = -torch.norm(to_target, p=2, dim=-1) / dt
+
+    return (
+        up_proj,
+        heading_proj,
+        up_vec,
+        heading_vec,
+        vel_loc,
+        angvel_loc,
+        roll,
+        pitch,
+        yaw,
+        angle_to_target,
+        dof_pos_scaled,
+        prev_potentials,
+        potentials,
+    )
