@@ -329,7 +329,7 @@ class AnymalCMultiAgent(DirectMARLEnv):
     
     def _get_observations(self) -> dict:
         self.previous_actions = copy.deepcopy(self.actions)
-        height_datas = {}
+        # height_datas = {}
         # for robot_id, robot in self.robots.items():
         #     height_data = None
         #     # if isinstance(self.cfg, AnymalCMultiAgentWalkingRoughEnvCfg):
@@ -425,9 +425,9 @@ class AnymalCMultiAgent(DirectMARLEnv):
                 # "undesired_contacts": contacts * self.cfg.undersired_contact_reward_scale * self.step_dt,
                 # "flat_orientation_l2": flat_orientation * self.cfg.flat_orientation_reward_scale * self.step_dt,
                 "flat_bar_roll_angle" : bar_roll_angle_mapped * self.cfg.flat_bar_roll_angle_reward_scale * self.step_dt,
-                "bar_fallen_reward" : bar_fallen_reward,
-                "anymal_fallen_reward" : anymal_fallen_reward,
-                "finished_reward" : finished_reward
+                # "bar_fallen_reward" : bar_fallen_reward,
+                # "anymal_fallen_reward" : anymal_fallen_reward,
+                # "finished_reward" : finished_reward
 
             }
             curr_reward = torch.sum(torch.stack(list(rewards.values())), dim=0)
