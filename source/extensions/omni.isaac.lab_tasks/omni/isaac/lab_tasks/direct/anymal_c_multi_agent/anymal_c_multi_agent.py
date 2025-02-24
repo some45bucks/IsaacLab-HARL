@@ -10,6 +10,7 @@ import torch
 
 import omni.isaac.lab.envs.mdp as mdp
 import omni.isaac.lab.sim as sim_utils
+from omni.isaac.lab.markers import VisualizationMarkers, VisualizationMarkersCfg
 from omni.isaac.lab.assets import Articulation, ArticulationCfg, AssetBase, AssetBaseCfg, RigidObject, RigidObjectCfg
 from omni.isaac.lab.envs import DirectRLEnv, DirectRLEnvCfg, DirectMARLEnv, DirectMARLEnvCfg
 from omni.isaac.lab.managers import EventTermCfg as EventTerm
@@ -77,6 +78,18 @@ class EventCfg:
         },
     )
 
+def define_markers() -> VisualizationMarkers:
+    marker_cfg = VisualizationMarkersCfg(
+        prim_path="/Visuals/myMarkers",
+        markers={
+            "arrow_x": sim_utils.UsdFileCfg(
+                usd_path=f"{ISAAC_NUCLEUS_DIR}/Props/UIElements/arrow_x.usd",
+                scale=(1.0, 0.5, 0.5),
+                visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(0.0, 1.0, 1.0)),
+            ),
+        },
+    )
+    return VisualizationMarkers(marker_cfg)
 
 @configclass
 class AnymalCMultiAgentFlatEnvCfg(DirectMARLEnvCfg):
@@ -252,6 +265,7 @@ class AnymalCMultiAgent(DirectMARLEnv):
     def __init__(self, cfg: AnymalCMultiAgentFlatEnvCfg | AnymalCMultiAgentRoughEnvCfg, render_mode: str | None = None, **kwargs):
         super().__init__(cfg, render_mode, **kwargs)
         # Joint position command (deviation from default joint positions)
+
         self.actions = {agent : torch.zeros(self.num_envs, action_space, device=self.device) for agent, action_space in self.cfg.action_spaces.items()}
         self.previous_actions = {agent : torch.zeros(self.num_envs, action_space, device=self.device) for agent, action_space in self.cfg.action_spaces.items()}
         # X/Y linear velocity and yaw angular velocity commands
@@ -295,7 +309,7 @@ class AnymalCMultiAgent(DirectMARLEnv):
         self.contact_sensors = {}
         self.height_scanners = {}
         self.object = RigidObject(self.cfg.cfg_rec_prism)
-        
+        self.my_visualizer = define_markers()
         self.scene.rigid_objects["object"] = self.object
 
         for i in range(self.num_robots):
