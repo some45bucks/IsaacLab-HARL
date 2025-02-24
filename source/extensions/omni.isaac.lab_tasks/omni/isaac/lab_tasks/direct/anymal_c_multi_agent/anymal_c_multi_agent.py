@@ -255,7 +255,8 @@ class AnymalCMultiAgent(DirectMARLEnv):
         self.actions = {agent : torch.zeros(self.num_envs, action_space, device=self.device) for agent, action_space in self.cfg.action_spaces.items()}
         self.previous_actions = {agent : torch.zeros(self.num_envs, action_space, device=self.device) for agent, action_space in self.cfg.action_spaces.items()}
         # X/Y linear velocity and yaw angular velocity commands
-        self._commands = {agent : torch.zeros(self.num_envs, 3, device=self.device) for agent in self.cfg.possible_agents}
+        # self._commands = {agent : torch.zeros(self.num_envs, 3, device=self.device) for agent in self.cfg.possible_agents}
+        self._commands = torch.zeros(self.num_envs, 3, device=self.device)
 
         # Logging
         self._episode_sums = {
@@ -348,7 +349,7 @@ class AnymalCMultiAgent(DirectMARLEnv):
                     robot.data.root_com_lin_vel_b,
                     robot.data.root_com_ang_vel_b,
                     robot.data.projected_gravity_b,
-                    self._commands[robot_id],
+                    self._commands,
                     robot.data.joint_pos - robot.data.default_joint_pos,
                     robot.data.joint_vel,
                     # height_datas[robot_id],
@@ -380,10 +381,10 @@ class AnymalCMultiAgent(DirectMARLEnv):
 
         for robot_id, robot in self.robots.items():
             # linear velocity tracking
-            lin_vel_error = torch.sum(torch.square(self._commands[robot_id][:, :2] - self.object.data.root_com_lin_vel_b[:, :2]), dim=1) #changing this to the bar
+            lin_vel_error = torch.sum(torch.square(self._commands[:, :2] - self.object.data.root_com_lin_vel_b[:, :2]), dim=1) #changing this to the bar
             lin_vel_error_mapped = torch.exp(-lin_vel_error) 
             # yaw rate tracking
-            yaw_rate_error = torch.square(self._commands[robot_id][:, 2] - self.object.data.root_com_ang_vel_b[:, 2])
+            yaw_rate_error = torch.square(self._commands[:, 2] - self.object.data.root_com_ang_vel_b[:, 2])
             yaw_rate_error_mapped = torch.exp(-yaw_rate_error)
             # z velocity tracking
             z_vel_error = torch.square(robot.data.root_com_lin_vel_b[:, 2])
@@ -403,7 +404,7 @@ class AnymalCMultiAgent(DirectMARLEnv):
             first_contact = self.contact_sensors[robot_id].compute_first_contact(self.step_dt)[:, self.feet_ids[robot_id]]
             last_air_time = self.contact_sensors[robot_id].data.last_air_time[:, self.feet_ids[robot_id]]
             air_time = torch.sum((last_air_time - 0.5) * first_contact, dim=1) * (
-                torch.norm(self._commands[robot_id][:, :2], dim=1) > 0.1
+                torch.norm(self._commands[:, :2], dim=1) > 0.1
             )
             # undersired contacts
             net_contact_forces = self.contact_sensors[robot_id].data.net_forces_w_history
@@ -503,12 +504,15 @@ class AnymalCMultiAgent(DirectMARLEnv):
         self.previous_actions = {agent : torch.zeros(self.num_envs, action_space, device=self.device) for agent, action_space in self.cfg.action_spaces.items()}
 
         # X/Y linear velocity and yaw angular velocity commands
-        command = torch.zeros(self.num_envs, 3, device=self.device).uniform_(-1.0, 1.0)
-        command = torch.zeros(self.num_envs, 3, device=self.device)
+        # command = torch.zeros(self.num_envs, 3, device=self.device).uniform_(-1.0, 1.0)
+        # command = torch.zeros(self.num_envs, 3, device=self.device)
         # command[:, 2] = 0.0
         # command[:, 1] = 1.0
         # command[:, 0] = 1.0
-        self._commands = {agent : command for agent in self.cfg.possible_agents}
+        # self._commands = {agent : command for agent in self.cfg.possible_agents}
+        self._commands = torch.zeros(self.num_envs, 3, device=self.device).uniform_(-1.0, 1.0)
+        self._commands[:, 2] = 0
+
 
         for _, robot in self.robots.items():
             if env_ids is None or len(env_ids) == self.num_envs:
