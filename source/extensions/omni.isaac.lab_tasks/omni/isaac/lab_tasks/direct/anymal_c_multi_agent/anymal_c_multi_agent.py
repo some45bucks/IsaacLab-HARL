@@ -148,7 +148,7 @@ class AnymalCMultiAgentFlatEnvCfg(DirectMARLEnvCfg):
         spawn=sim_utils.CuboidCfg( 
             size=(5,.1,.1),
             rigid_props=sim_utils.RigidBodyPropertiesCfg(),
-            mass_props=sim_utils.MassPropertiesCfg(mass=1), # changed from 1.0 to 0.5
+            mass_props=sim_utils.MassPropertiesCfg(mass=0.01), # changed from 1.0 to 0.5
             collision_props=sim_utils.CollisionPropertiesCfg(),
             visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(0.0, 1.0, 0.0))
         ),
@@ -255,7 +255,8 @@ class AnymalCMultiAgent(DirectMARLEnv):
         self.actions = {agent : torch.zeros(self.num_envs, action_space, device=self.device) for agent, action_space in self.cfg.action_spaces.items()}
         self.previous_actions = {agent : torch.zeros(self.num_envs, action_space, device=self.device) for agent, action_space in self.cfg.action_spaces.items()}
         # X/Y linear velocity and yaw angular velocity commands
-        self._commands = {agent : torch.zeros(self.num_envs, 3, device=self.device) for agent in self.cfg.possible_agents}
+        # self._commands = {agent : torch.zeros(self.num_envs, 3, device=self.device) for agent in self.cfg.possible_agents}
+        self._commands = torch.zeros(self.num_envs, 3, device=self.device)
 
         # Logging
         self._episode_sums = {
@@ -329,7 +330,7 @@ class AnymalCMultiAgent(DirectMARLEnv):
     
     def _get_observations(self) -> dict:
         self.previous_actions = copy.deepcopy(self.actions)
-        height_datas = {}
+        # height_datas = {}
         # for robot_id, robot in self.robots.items():
         #     height_data = None
         #     # if isinstance(self.cfg, AnymalCMultiAgentWalkingRoughEnvCfg):
@@ -348,7 +349,7 @@ class AnymalCMultiAgent(DirectMARLEnv):
                     robot.data.root_com_lin_vel_b,
                     robot.data.root_com_ang_vel_b,
                     robot.data.projected_gravity_b,
-                    self._commands[robot_id],
+                    self._commands,
                     robot.data.joint_pos - robot.data.default_joint_pos,
                     robot.data.joint_vel,
                     # height_datas[robot_id],
@@ -380,10 +381,10 @@ class AnymalCMultiAgent(DirectMARLEnv):
 
         for robot_id, robot in self.robots.items():
             # linear velocity tracking
-            lin_vel_error = torch.sum(torch.square(self._commands[robot_id][:, :2] - self.object.data.root_com_lin_vel_b[:, :2]), dim=1) #changing this to the bar
+            lin_vel_error = torch.sum(torch.square(self._commands[:, :2] - self.object.data.root_com_lin_vel_b[:, :2]), dim=1) #changing this to the bar
             lin_vel_error_mapped = torch.exp(-lin_vel_error) 
             # yaw rate tracking
-            yaw_rate_error = torch.square(self._commands[robot_id][:, 2] - self.object.data.root_com_ang_vel_b[:, 2])
+            yaw_rate_error = torch.square(self._commands[:, 2] - self.object.data.root_com_ang_vel_b[:, 2])
             yaw_rate_error_mapped = torch.exp(-yaw_rate_error)
             # z velocity tracking
             z_vel_error = torch.square(robot.data.root_com_lin_vel_b[:, 2])
@@ -403,7 +404,7 @@ class AnymalCMultiAgent(DirectMARLEnv):
             first_contact = self.contact_sensors[robot_id].compute_first_contact(self.step_dt)[:, self.feet_ids[robot_id]]
             last_air_time = self.contact_sensors[robot_id].data.last_air_time[:, self.feet_ids[robot_id]]
             air_time = torch.sum((last_air_time - 0.5) * first_contact, dim=1) * (
-                torch.norm(self._commands[robot_id][:, :2], dim=1) > 0.1
+                torch.norm(self._commands[:, :2], dim=1) > 0.1
             )
             # undersired contacts
             net_contact_forces = self.contact_sensors[robot_id].data.net_forces_w_history
@@ -415,7 +416,7 @@ class AnymalCMultiAgent(DirectMARLEnv):
             flat_orientation = torch.sum(torch.square(robot.data.projected_gravity_b[:, :2]), dim=1)
             rewards = {
                 "track_lin_vel_xy_exp": lin_vel_error_mapped * self.cfg.lin_vel_reward_scale * self.step_dt,
-                "track_ang_vel_z_exp": yaw_rate_error_mapped * self.cfg.yaw_rate_reward_scale * self.step_dt,
+                # "track_ang_vel_z_exp": yaw_rate_error_mapped * self.cfg.yaw_rate_reward_scale * self.step_dt,
                 # "lin_vel_z_l2": z_vel_error * self.cfg.z_vel_reward_scale * self.step_dt,
                 # "ang_vel_xy_l2": ang_vel_error * self.cfg.ang_vel_reward_scale * self.step_dt,
                 # "dof_torques_l2": joint_torques * self.cfg.joint_torque_reward_scale * self.step_dt,
@@ -424,10 +425,10 @@ class AnymalCMultiAgent(DirectMARLEnv):
                 # "feet_air_time": air_time * self.cfg.feet_air_time_reward_scale * self.step_dt,
                 # "undesired_contacts": contacts * self.cfg.undersired_contact_reward_scale * self.step_dt,
                 # "flat_orientation_l2": flat_orientation * self.cfg.flat_orientation_reward_scale * self.step_dt,
-                "flat_bar_roll_angle" : bar_roll_angle_mapped * self.cfg.flat_bar_roll_angle_reward_scale * self.step_dt,
-                "bar_fallen_reward" : bar_fallen_reward,
-                "anymal_fallen_reward" : anymal_fallen_reward,
-                "finished_reward" : finished_reward
+                # "flat_bar_roll_angle" : bar_roll_angle_mapped * self.cfg.flat_bar_roll_angle_reward_scale * self.step_dt,
+                # "bar_fallen_reward" : bar_fallen_reward,
+                # "anymal_fallen_reward" : anymal_fallen_reward,
+                # "finished_reward" : finished_reward
 
             }
             curr_reward = torch.sum(torch.stack(list(rewards.values())), dim=0)
@@ -503,12 +504,15 @@ class AnymalCMultiAgent(DirectMARLEnv):
         self.previous_actions = {agent : torch.zeros(self.num_envs, action_space, device=self.device) for agent, action_space in self.cfg.action_spaces.items()}
 
         # X/Y linear velocity and yaw angular velocity commands
-        command = torch.zeros(self.num_envs, 3, device=self.device).uniform_(-1.0, 1.0)
-        command = torch.zeros(self.num_envs, 3, device=self.device)
+        # command = torch.zeros(self.num_envs, 3, device=self.device).uniform_(-1.0, 1.0)
+        # command = torch.zeros(self.num_envs, 3, device=self.device)
         # command[:, 2] = 0.0
         # command[:, 1] = 1.0
         # command[:, 0] = 1.0
-        self._commands = {agent : command for agent in self.cfg.possible_agents}
+        # self._commands = {agent : command for agent in self.cfg.possible_agents}
+        self._commands = torch.zeros(self.num_envs, 3, device=self.device).uniform_(-1.0, 1.0)
+        self._commands[:, 2] = 0
+
 
         for _, robot in self.robots.items():
             if env_ids is None or len(env_ids) == self.num_envs:
