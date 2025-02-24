@@ -90,9 +90,11 @@ class HeterogeneousMultiAgentFlatEnvCfg(DirectMARLEnvCfg):
     decimation = 4
     action_scale = 0.5
     action_space = 12
+    # actual_action_spaces = {f"robot_0": 12, f"robot_1":19}
     action_spaces = {f"robot_0": 12, f"robot_1":19}
     # observation_space = 48
     observation_space = 235
+
     observation_spaces = {f"robot_0": 48, f"robot_1":72}
     state_space = 0
     state_spaces = {f"robot_{i}": 0 for i in range(2)}
@@ -176,6 +178,7 @@ class HeterogeneousMultiAgentFlatEnvCfg(DirectMARLEnvCfg):
     dof_vel_scale: float = 0.1
     action_scale = 1.0
     termination_height: float = 0.8
+    anymal_min_z_pos = 0.3
 
 
     joint_gears: list = [
@@ -260,6 +263,7 @@ class HeterogeneousMultiAgent(DirectMARLEnv):
         self.base_bodies = ["base", "pelvis"]
         # X/Y linear velocity and yaw angular velocity commands
         self._commands = {agent : torch.zeros(self.num_envs, 3, device=self.device) for agent in self.cfg.possible_agents}
+        self._joint_dof_idx, _ = self.robots["robot_1"].find_joints(".*")
 
         # Logging
         self._episode_sums = {
@@ -291,14 +295,21 @@ class HeterogeneousMultiAgent(DirectMARLEnv):
             self.feet_ids[robot_id] = _feet_ids
             self.undesired_body_contact_ids[robot_id] = _undesired_contact_body_ids
 
-        
+        self.potentials = torch.zeros(self.num_envs, dtype=torch.float32, device=self.sim.device)
+        self.prev_potentials = torch.zeros_like(self.potentials)
+        self.targets = torch.tensor([1000, 0, 0], dtype=torch.float32, device=self.sim.device).repeat(
+            (self.num_envs, 1)
+        )
         self.action_scale = self.cfg.action_scale
         self.joint_gears = torch.tensor(self.cfg.joint_gears, dtype=torch.float32, device=self.sim.device)
         self.targets = torch.tensor([1000, 0, 0], dtype=torch.float32, device=self.sim.device).repeat(
             (self.num_envs, 1)
         )
         self.targets += self.scene.env_origins
-
+        self.heading_vec = torch.tensor([1, 0, 0], dtype=torch.float32, device=self.sim.device).repeat(
+            (self.num_envs, 1)
+        )
+        self.up_vec = torch.tensor([0, 0, 1], dtype=torch.float32, device=self.sim.device).repeat((self.num_envs, 1))
         self.start_rotation = torch.tensor([1, 0, 0, 0], device=self.sim.device, dtype=torch.float32)
         self.inv_start_rot = quat_conjugate(self.start_rotation).repeat((self.num_envs, 1))
         self.basis_vec0 = self.heading_vec.clone()
@@ -344,14 +355,27 @@ class HeterogeneousMultiAgent(DirectMARLEnv):
         # We need to process the actions for each scene independently
         self.processed_actions = copy.deepcopy(actions)
         for robot_id, robot in self.robots.items():
-            self.actions[robot_id] = actions[robot_id].clone()
+            robot_action_space = self.action_spaces[robot_id].shape[0]
+            self.actions[robot_id] = actions[robot_id][:,:robot_action_space].clone()
             self.processed_actions[robot_id] = self.cfg.action_scale * self.actions[robot_id] + robot.data.default_joint_pos
 
+    def _get_anymal_fallen(self):
+        agent_dones = []
+
+        for _, robot in self.robots.items():
+            died = robot.data.body_com_pos_w[:,0,2].view(-1) < self.cfg.anymal_min_z_pos
+            agent_dones.append(died)
+
+        return torch.any(torch.stack(agent_dones), dim=0)
+    
     def _apply_action(self):
         
-        self.robots["robot_0"].set_joint_position_target(self.processed_actions[robot_id])
-        forces = self.action_scale * self.joint_gears * self.actions
-        self.robots["robot_1"].set_joint_effort_target(forces, joint_ids=self._joint_dof_idx)
+        robot_id = "robot_0"
+        self.robots[robot_id].set_joint_position_target(self.processed_actions[robot_id])
+
+        robot_id = "robot_1"
+        forces = self.action_scale * self.joint_gears * self.actions[robot_id]
+        self.robots[robot_id].set_joint_effort_target(forces, joint_ids=self._joint_dof_idx)
 
     def _compute_intermediate_values(self):
         self.torso_position, self.torso_rotation = self.robots["robot_1"].data.root_link_pos_w, self.robots["robot_1"].data.root_link_quat_w
@@ -536,6 +560,11 @@ class HeterogeneousMultiAgent(DirectMARLEnv):
         self._compute_intermediate_values()
         time_out = self.episode_length_buf >= self.max_episode_length - 1
         h1_died = self.torso_position[:, 2] < self.cfg.termination_height
+        anymal_fallen = self._get_anymal_fallen()
+
+        dones = torch.logical_or(h1_died, anymal_fallen)
+
+        return {key:time_out for key in self.robots.keys()}, {key:dones for key in self.robots.keys()}
         
 
     
