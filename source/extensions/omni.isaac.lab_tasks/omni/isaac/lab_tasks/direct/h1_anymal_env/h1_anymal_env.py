@@ -88,12 +88,9 @@ class HeterogeneousMultiAgentFlatEnvCfg(DirectMARLEnvCfg):
     # env
     episode_length_s = 20.0
     decimation = 4
-    action_scale = 0.5
+    anymal_action_scale = 0.5
     action_space = 12
-    # actual_action_spaces = {f"robot_0": 12, f"robot_1":19}
     action_spaces = {f"robot_0": 12, f"robot_1":19}
-    # observation_space = 48
-    observation_space = 235
 
     observation_spaces = {f"robot_0": 48, f"robot_1":72}
     state_space = 0
@@ -176,7 +173,7 @@ class HeterogeneousMultiAgentFlatEnvCfg(DirectMARLEnvCfg):
     flat_bar_roll_angle_reward_scale = -1.0
     angular_velocity_scale: float = 0.25
     dof_vel_scale: float = 0.1
-    action_scale = 1.0
+    h1_action_scale = 1.0
     termination_height: float = 0.8
     anymal_min_z_pos = 0.3
 
@@ -204,7 +201,6 @@ class HeterogeneousMultiAgentFlatEnvCfg(DirectMARLEnvCfg):
     ]
 
 
-
 @configclass
 class HeterogeneousMultiAgentRoughEnvCfg(HeterogeneousMultiAgentFlatEnvCfg):
     # env
@@ -230,23 +226,23 @@ class HeterogeneousMultiAgentRoughEnvCfg(HeterogeneousMultiAgentFlatEnvCfg):
     )
 
     # we add a height scanner for perceptive locomotion
-    # height_scanner_0 = RayCasterCfg(
-    #     prim_path="/World/envs/env_.*/Robot_0/base",
-    #     offset=RayCasterCfg.OffsetCfg(pos=(0.0, 0.0, 20.0)),
-    #     attach_yaw_only=True,
-    #     pattern_cfg=patterns.GridPatternCfg(resolution=0.1, size=[1.6, 1.0]),
-    #     debug_vis=False,
-    #     mesh_prim_paths=["/World/ground"],
-    # )
+    height_scanner_0 = RayCasterCfg(
+        prim_path="/World/envs/env_.*/Robot_0/base",
+        offset=RayCasterCfg.OffsetCfg(pos=(0.0, 0.0, 20.0)),
+        attach_yaw_only=True,
+        pattern_cfg=patterns.GridPatternCfg(resolution=0.1, size=[1.6, 1.0]),
+        debug_vis=False,
+        mesh_prim_paths=["/World/ground"],
+    )
 
-    # height_scanner_1 = RayCasterCfg(
-    #     prim_path="/World/envs/env_.*/Robot_1/pelvis",
-    #     offset=RayCasterCfg.OffsetCfg(pos=(0.0, 0.0, 20.0)),
-    #     attach_yaw_only=True,
-    #     pattern_cfg=patterns.GridPatternCfg(resolution=0.1, size=[1.6, 1.0]),
-    #     debug_vis=False,
-    #     mesh_prim_paths=["/World/ground"],
-    # )
+    height_scanner_1 = RayCasterCfg(
+        prim_path="/World/envs/env_.*/Robot_1/pelvis",
+        offset=RayCasterCfg.OffsetCfg(pos=(0.0, 0.0, 20.0)),
+        attach_yaw_only=True,
+        pattern_cfg=patterns.GridPatternCfg(resolution=0.1, size=[1.6, 1.0]),
+        debug_vis=False,
+        mesh_prim_paths=["/World/ground"],
+    )
 
     # reward scales (override from flat config)
     flat_orientation_reward_scale = 0.0
@@ -262,7 +258,7 @@ class HeterogeneousMultiAgent(DirectMARLEnv):
         self.previous_actions = {agent : torch.zeros(self.num_envs, action_space, device=self.device) for agent, action_space in self.cfg.action_spaces.items()}
         self.base_bodies = ["base", "pelvis"]
         # X/Y linear velocity and yaw angular velocity commands
-        self._commands = {agent : torch.zeros(self.num_envs, 3, device=self.device) for agent in self.cfg.possible_agents}
+        self._commands = torch.zeros(self.num_envs, 3, device=self.device)
         self._joint_dof_idx, _ = self.robots["robot_1"].find_joints(".*")
 
         # Logging
@@ -300,7 +296,6 @@ class HeterogeneousMultiAgent(DirectMARLEnv):
         self.targets = torch.tensor([1000, 0, 0], dtype=torch.float32, device=self.sim.device).repeat(
             (self.num_envs, 1)
         )
-        self.action_scale = self.cfg.action_scale
         self.joint_gears = torch.tensor(self.cfg.joint_gears, dtype=torch.float32, device=self.sim.device)
         self.targets = torch.tensor([1000, 0, 0], dtype=torch.float32, device=self.sim.device).repeat(
             (self.num_envs, 1)
@@ -351,13 +346,17 @@ class HeterogeneousMultiAgent(DirectMARLEnv):
         light_cfg = sim_utils.DomeLightCfg(intensity=2000.0, color=(0.75, 0.75, 0.75))
         light_cfg.func("/World/Light", light_cfg)
 
-    def _pre_physics_step(self, actions: torch.Tensor):
+    def _pre_physics_step(self, actions: dict):
         # We need to process the actions for each scene independently
         self.processed_actions = copy.deepcopy(actions)
-        for robot_id, robot in self.robots.items():
-            robot_action_space = self.action_spaces[robot_id].shape[0]
-            self.actions[robot_id] = actions[robot_id][:,:robot_action_space].clone()
-            self.processed_actions[robot_id] = self.cfg.action_scale * self.actions[robot_id] + robot.data.default_joint_pos
+
+        robot_id = "robot_0"
+        robot_action_space = self.action_spaces[robot_id].shape[0]
+        self.actions[robot_id] = actions[robot_id][:,:robot_action_space].clone()
+        self.processed_actions[robot_id] = self.cfg.anymal_action_scale * self.actions[robot_id] + self.robots[robot_id].data.default_joint_pos
+
+        robot_id = "robot_1"
+        self.actions[robot_id] = actions[robot_id].clone()
 
     def _get_anymal_fallen(self):
         agent_dones = []
@@ -374,7 +373,7 @@ class HeterogeneousMultiAgent(DirectMARLEnv):
         self.robots[robot_id].set_joint_position_target(self.processed_actions[robot_id])
 
         robot_id = "robot_1"
-        forces = self.action_scale * self.joint_gears * self.actions[robot_id]
+        forces = self.cfg.h1_action_scale * self.joint_gears * self.actions[robot_id]
         self.robots[robot_id].set_joint_effort_target(forces, joint_ids=self._joint_dof_idx)
 
     def _compute_intermediate_values(self):
@@ -431,7 +430,7 @@ class HeterogeneousMultiAgent(DirectMARLEnv):
 
         robot_id = "robot_0"
         robot = self.robots[robot_id]
-
+        anymal_commands = torch.stack([self._commands[:,1], self._commands[:,0], self._commands[:,2]]).t()
         obs[robot_id] = (torch.cat(
         [
             tensor
@@ -439,10 +438,10 @@ class HeterogeneousMultiAgent(DirectMARLEnv):
                 robot.data.root_com_lin_vel_b,
                 robot.data.root_com_ang_vel_b,
                 robot.data.projected_gravity_b,
-                self._commands[robot_id],
+                anymal_commands,
                 robot.data.joint_pos - robot.data.default_joint_pos,
                 robot.data.joint_vel,
-                # height_datas[robot_id] if robot_id in height_datas else torch.zeros_like(robot.data.root_com_lin_vel_b),
+                None,
                 self.actions[robot_id],
             )
             if tensor is not None
@@ -466,7 +465,7 @@ class HeterogeneousMultiAgent(DirectMARLEnv):
                 self.dof_pos_scaled,
                 self.dof_vel * self.cfg.dof_vel_scale,
                 self.actions[robot_id],
-                self._commands[robot_id]
+                self._commands
             ),
             dim=-1,
         )
@@ -481,65 +480,18 @@ class HeterogeneousMultiAgent(DirectMARLEnv):
     
     def _get_rewards(self) -> dict:
         reward = {}
-        for robot_id, robot in self.robots.items():
 
-            calc_sensor = robot_id in self.contact_sensors
-            default_tensor = torch.zeros(2).to(self.device)
+        for robot_id, _ in self.robots.items():
             # linear velocity tracking
-            lin_vel_error = torch.sum(torch.square(self._commands[robot_id][:, :2] - self.object.data.root_com_lin_vel_b[:, :2]), dim=1) #changing this to the bar
-            lin_vel_error_mapped = torch.exp(-lin_vel_error / 0.25)
-            # yaw rate tracking
-            yaw_rate_error = torch.square(self._commands[robot_id][:, 2] - self.object.data.root_com_ang_vel_b[:, 2])
-            yaw_rate_error_mapped = torch.exp(-yaw_rate_error / 0.25)
-            # z velocity tracking
-            z_vel_error = torch.square(robot.data.root_com_lin_vel_b[:, 2])
-            # angular velocity x/y
-            ang_vel_error = torch.sum(torch.square(robot.data.root_com_ang_vel_b[:, :2]), dim=1)
-            # joint torques
-            joint_torques = torch.sum(torch.square(robot.data.applied_torque), dim=1)
-            # joint acceleration
-            joint_accel = torch.sum(torch.square(robot.data.joint_acc), dim=1)
-            # action rate            
-            action_rate = torch.sum(torch.square(self.actions[robot_id] - self.previous_actions[robot_id]).view(1,-1), dim=1)
-            # feet air time
-            first_contact = self.contact_sensors[robot_id].compute_first_contact(self.step_dt)[:, self.feet_ids[robot_id]] if\
-            calc_sensor else default_tensor
-            last_air_time = self.contact_sensors[robot_id].data.last_air_time[:, self.feet_ids[robot_id]] if\
-            calc_sensor else default_tensor
-            air_time = torch.sum((last_air_time - 0.5) * first_contact, dim=1) * (
-                torch.norm(self._commands[robot_id][:, :2], dim=1) > 0.1
-            ) if calc_sensor else default_tensor
-            # undersired contacts
-            net_contact_forces = self.contact_sensors[robot_id].data.net_forces_w_history if\
-            calc_sensor else default_tensor
-            is_contact = (
-                torch.max(torch.norm(net_contact_forces[:, :, self.undesired_body_contact_ids[robot_id]], dim=-1), dim=1)[0] > 1.0 if\
-                calc_sensor else default_tensor
-            )
-            contacts = torch.sum(is_contact, dim=1) if calc_sensor else default_tensor
-            # flat orientation
-            flat_orientation = torch.sum(torch.square(robot.data.projected_gravity_b[:, :2]), dim=1)
+            lin_vel_error = torch.sum(torch.square(self._commands[:, :2] - self.object.data.root_com_lin_vel_b[:, :2]), dim=1) #changing this to the bar
+            lin_vel_error_mapped = torch.exp(-lin_vel_error) 
+
             rewards = {
                 "track_lin_vel_xy_exp": lin_vel_error_mapped * self.cfg.lin_vel_reward_scale * self.step_dt,
-                "track_ang_vel_z_exp": yaw_rate_error_mapped * self.cfg.yaw_rate_reward_scale * self.step_dt,
-                "lin_vel_z_l2": z_vel_error * self.cfg.z_vel_reward_scale * self.step_dt,
-                "ang_vel_xy_l2": ang_vel_error * self.cfg.ang_vel_reward_scale * self.step_dt,
-                "dof_torques_l2": joint_torques * self.cfg.joint_torque_reward_scale * self.step_dt,
-                "dof_acc_l2": joint_accel * self.cfg.joint_accel_reward_scale * self.step_dt,
-                "action_rate_l2": (action_rate * self.cfg.action_rate_reward_scale * self.step_dt).repeat(self.num_envs),
-                "feet_air_time": air_time * self.cfg.feet_air_time_reward_scale * self.step_dt,
-                "undesired_contacts": contacts * self.cfg.undersired_contact_reward_scale * self.step_dt,
-                "flat_orientation_l2": flat_orientation * self.cfg.flat_orientation_reward_scale * self.step_dt,
-                # "flat_bar_roll_angle" : torch.abs(self.get_y_euler_from_quat(self.object.data.root_com_quat_w))\
-                #       * self.cfg.flat_bar_roll_angle_reward_scale * self.step_dt
             }
             curr_reward = torch.sum(torch.stack(list(rewards.values())), dim=0)
 
             reward[robot_id] = curr_reward
-
-        # Logging
-        for key, value in rewards.items():
-            self._episode_sums[key] += value
 
         return reward
 
@@ -563,7 +515,9 @@ class HeterogeneousMultiAgent(DirectMARLEnv):
         anymal_fallen = self._get_anymal_fallen()
 
         dones = torch.logical_or(h1_died, anymal_fallen)
+        # dones = anymal_fallen
 
+        # return {key:torch.zeros_like(time_out) for key in self.robots.keys()}, {key:torch.zeros_like(dones) for key in self.robots.keys()}
         return {key:time_out for key in self.robots.keys()}, {key:dones for key in self.robots.keys()}
         
 
@@ -575,18 +529,19 @@ class HeterogeneousMultiAgent(DirectMARLEnv):
             object_default_state[:, 0:3] + self.scene.env_origins[env_ids]
         )
         self.object.write_root_state_to_sim(object_default_state, env_ids)
-        # self.object.reset(env_ids)
+        self.object.reset(env_ids)
 
         # Joint position command (deviation from default joint positions)
         self.actions = {agent : torch.zeros(self.num_envs, action_space, device=self.device) for agent, action_space in self.cfg.action_spaces.items()}
         self.previous_actions = {agent : torch.zeros(self.num_envs, action_space, device=self.device) for agent, action_space in self.cfg.action_spaces.items()}
 
         # X/Y linear velocity and yaw angular velocity commands
-        command = torch.zeros(self.num_envs, 3, device=self.device).uniform_(-1.0, 1.0)
+        # command = torch.zeros(self.num_envs, 3, device=self.device).uniform_(-1.0, 1.0)
         # command[:, 2] = 0.0
         # command[:, 1] = 0.0
         # command[:, 0] = 1.0
-        self._commands = {agent : command for agent in self.cfg.possible_agents}
+        self._commands = torch.zeros(self.num_envs, 3, device=self.device)
+        self._commands[:, 1] = 0.5
 
         ### reset idx for h1 ###
         if env_ids is None or len(env_ids) == self.num_envs:

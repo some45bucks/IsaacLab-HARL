@@ -524,8 +524,10 @@ class AnymalCMultiAgent(DirectMARLEnv):
         # command[:, 1] = 1.0
         # command[:, 0] = 1.0
         # self._commands = {agent : command for agent in self.cfg.possible_agents}
-        self._commands = torch.zeros(self.num_envs, 3, device=self.device).uniform_(-1.0, 1.0)
-        self._commands[:, 2] = 0
+        # self._commands = torch.zeros(self.num_envs, 3, device=self.device).uniform_(-1.0, 1.0)
+        self._commands = torch.zeros(self.num_envs, 3, device=self.device)
+        self._commands[:,0] = 1
+        # self._commands[:, 2] = 0
 
 
         for _, robot in self.robots.items():
