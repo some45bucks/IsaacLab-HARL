@@ -83,9 +83,12 @@ def define_markers() -> VisualizationMarkers:
     marker_cfg = VisualizationMarkersCfg(
         prim_path="/Visuals/myMarkers",
         markers={
-            "arrow_x": sim_utils.UsdFileCfg(
-                usd_path=f"{ISAAC_NUCLEUS_DIR}/Props/UIElements/arrow_x.usd",
-                scale=(1.0, 0.5, 0.5),
+            "sphere1": sim_utils.SphereCfg(
+                radius=0.1,
+                visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(0.0, 0.0, 1.0)),
+            ),
+            "sphere2": sim_utils.SphereCfg(
+                radius=0.1,
                 visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(0.0, 1.0, 1.0)),
             ),
         },
@@ -356,8 +359,17 @@ class AnymalCMultiAgent(DirectMARLEnv):
 
         
         obs = {}
-        # marker_orientations = quat_from_angle_axis(torch.tensor([0], device="cuda:0"), self._commands)
-        # self.my_visualizer.visualize(self._commands,marker_orientations)
+
+        xy_commands = self._commands.clone()
+        xy_commands[:,2] = 0
+
+        marker_ids = torch.concat([torch.zeros(2*self._commands.shape[0]),torch.ones(self._commands.shape[0])], axis=0)
+
+        marker_locations = torch.concat([self.object.data.body_com_pos_w.squeeze(1),self.object.data.body_com_pos_w.squeeze(1)+xy_commands,self.object.data.body_com_pos_w.squeeze(1)+self.object.data.root_com_lin_vel_b], axis=0)
+        marker_orientations = quat_from_angle_axis(torch.zeros(marker_locations.shape[0]), torch.tensor([0.0, 0.0, 1.0]))
+        self.my_visualizer.visualize(marker_locations,marker_orientations, marker_indices=marker_ids)
+        # self.my_visualizer.visualize(marker_locations+self._commands,marker_orientations)
+
         for robot_id, robot in self.robots.items():
             obs[robot_id] = (torch.cat(
             [
@@ -530,6 +542,7 @@ class AnymalCMultiAgent(DirectMARLEnv):
         # self._commands[env_ids] = torch.zeros(self.num_envs, 3, device=self.device).uniform_(-1.0, 1.0)
 
         self._commands[env_ids] = torch.zeros_like(self._commands[env_ids]).uniform_(-1.0, 1.0)
+        self._commands[env_ids,2] = 0.0
 
         for _, robot in self.robots.items():
             if env_ids is None or len(env_ids) == self.num_envs:
