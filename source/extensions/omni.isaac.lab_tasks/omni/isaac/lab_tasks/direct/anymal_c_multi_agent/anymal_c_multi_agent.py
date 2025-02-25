@@ -504,7 +504,7 @@ class AnymalCMultiAgent(DirectMARLEnv):
             flat_orientation = torch.sum(torch.square(robot.data.projected_gravity_b[:, :2]), dim=1)
             rewards = {
                 "track_lin_vel_xy_exp": lin_vel_error_mapped * self.cfg.lin_vel_reward_scale * self.step_dt,
-                # "track_ang_vel_z_exp": yaw_rate_error_mapped * self.cfg.yaw_rate_reward_scale * self.step_dt,
+                "track_ang_vel_z_exp": yaw_rate_error_mapped * self.cfg.yaw_rate_reward_scale * self.step_dt,
                 # "lin_vel_z_l2": z_vel_error * self.cfg.z_vel_reward_scale * self.step_dt,
                 # "ang_vel_xy_l2": ang_vel_error * self.cfg.ang_vel_reward_scale * self.step_dt,
                 # "dof_torques_l2": joint_torques * self.cfg.joint_torque_reward_scale * self.step_dt,
