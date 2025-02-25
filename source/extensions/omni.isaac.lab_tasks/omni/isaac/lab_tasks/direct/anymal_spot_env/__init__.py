@@ -10,7 +10,7 @@ Ant locomotion environment.
 import gymnasium as gym
 
 from . import agents
-from .heterogeneous_multi_agent import HeterogeneousMultiAgent, HeterogeneousMultiAgentFlatEnvCfg, HeterogeneousMultiAgentRoughEnvCfg
+from .anymal_spot_env import HeterogeneousMultiAgent, HeterogeneousMultiAgentFlatEnvCfg, HeterogeneousMultiAgentRoughEnvCfg
 
 ##
 # Register Gym environments.
