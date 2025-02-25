@@ -1,6 +1,12 @@
 ![Isaac Lab](docs/source/_static/isaaclab.jpg)
 
 ---
+# Training pitfalls to avoid
+
+- Make sure that when you train a velocity control policy that the orientation is how you expect it to be
+- Make sure that when you reset the index in the environment only reset the environment ids that need to be reset
+NOT all the environments 
+
 # For Mult Agent Reinforcement Learning
 
 Use these instructions to install isaac sim -> [here](https://docs.omniverse.nvidia.com/isaacsim/latest/installation/install_python.html#install-isaac-sim-using-pip)

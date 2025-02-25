@@ -10,15 +10,15 @@ Ant locomotion environment.
 import gymnasium as gym
 
 from . import agents
-from .multi_agent_heterogeneous import HeterogeneousMultiAgent, HeterogeneousMultiAgentFlatEnvCfg, HeterogeneousMultiAgentRoughEnvCfg
+from .h1_anymal_env import HeterogeneousMultiAgent, HeterogeneousMultiAgentFlatEnvCfg, HeterogeneousMultiAgentRoughEnvCfg
 
 ##
 # Register Gym environments.
 ##
 
 gym.register(
-    id="Isaac-Heterogeneous-Multi-Agent-Flat-Anymal-C-Direct-v0",
-    entry_point="omni.isaac.lab_tasks.direct.multi_agent_heterogeneous:HeterogeneousMultiAgent",
+    id="Isaac-Anymal-H1-Flat-Direct-v0",
+    entry_point="omni.isaac.lab_tasks.direct.h1_anymal_env:HeterogeneousMultiAgent",
     disable_env_checker=True,
     kwargs={
         "env_cfg_entry_point": HeterogeneousMultiAgentFlatEnvCfg,
@@ -30,7 +30,7 @@ gym.register(
 )
 
 gym.register(
-    id="Isaac-Heterogeneous-Multi-Agent-Velocity-Rough-Anymal-C-Direct-v0",
+    id="Isaac-Anymal-H1-Velocity-Rough-Direct-v0",
     entry_point="omni.isaac.lab_tasks.direct.multi_agent_heterogeneous:HeterogeneousMultiAgent",
     disable_env_checker=True,
     kwargs={
