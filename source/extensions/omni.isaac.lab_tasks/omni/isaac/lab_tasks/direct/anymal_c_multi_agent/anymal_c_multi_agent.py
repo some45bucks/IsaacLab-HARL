@@ -21,6 +21,7 @@ from omni.isaac.lab.sim import SimulationCfg
 from omni.isaac.lab.terrains import TerrainImporterCfg
 from omni.isaac.lab.utils import configclass
 from omni.isaac.lab.utils.assets import ISAAC_NUCLEUS_DIR
+from omni.isaac.lab.utils.math import quat_from_angle_axis
 import copy
 
 ##
@@ -355,6 +356,8 @@ class AnymalCMultiAgent(DirectMARLEnv):
 
         
         obs = {}
+        # marker_orientations = quat_from_angle_axis(torch.tensor([0], device="cuda:0"), self._commands)
+        # self.my_visualizer.visualize(self._commands,marker_orientations)
         for robot_id, robot in self.robots.items():
             obs[robot_id] = (torch.cat(
             [
@@ -524,9 +527,9 @@ class AnymalCMultiAgent(DirectMARLEnv):
         # command[:, 1] = 1.0
         # command[:, 0] = 1.0
         # self._commands = {agent : command for agent in self.cfg.possible_agents}
-        self._commands = torch.zeros(self.num_envs, 3, device=self.device).uniform_(-1.0, 1.0)
-        self._commands[:, 2] = 0
+        # self._commands[env_ids] = torch.zeros(self.num_envs, 3, device=self.device).uniform_(-1.0, 1.0)
 
+        self._commands[env_ids] = torch.zeros_like(self._commands[env_ids]).uniform_(-1.0, 1.0)
 
         for _, robot in self.robots.items():
             if env_ids is None or len(env_ids) == self.num_envs:

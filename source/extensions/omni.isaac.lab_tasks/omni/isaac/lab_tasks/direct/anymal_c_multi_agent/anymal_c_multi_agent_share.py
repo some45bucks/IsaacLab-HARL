@@ -100,7 +100,7 @@ class AnymalCMultiAgentFlatEnvCfg(DirectMARLEnvCfg):
     action_space = 12
     action_spaces = {f"robot_{i}": 12 for i in range(2)}
     # observation_space = 48
-    observation_space = 48 + 12
+    observation_space = 48+12
     observation_spaces = {f"robot_{i}": 48+12 for i in range(2)}
     state_space = 0
     state_spaces = {f"robot_{i}": 0 for i in range(2)}
@@ -215,7 +215,7 @@ class AnymalCMultiAgentFlatEnvCfg(DirectMARLEnvCfg):
 @configclass
 class AnymalCMultiAgentRoughEnvCfg(AnymalCMultiAgentFlatEnvCfg):
     # env
-    observation_space = 48 + 12
+    observation_space = 48+12
 
     terrain = TerrainImporterCfg(
         prim_path="/World/ground",
@@ -259,7 +259,7 @@ class AnymalCMultiAgentRoughEnvCfg(AnymalCMultiAgentFlatEnvCfg):
     flat_orientation_reward_scale = 0.0
 
 
-class AnymalCMultiAgentShare(DirectMARLEnv):
+class AnymalCMultiAgent(DirectMARLEnv):
     cfg: AnymalCMultiAgentFlatEnvCfg | AnymalCMultiAgentRoughEnvCfg
 
     def __init__(self, cfg: AnymalCMultiAgentFlatEnvCfg | AnymalCMultiAgentRoughEnvCfg, render_mode: str | None = None, **kwargs):
