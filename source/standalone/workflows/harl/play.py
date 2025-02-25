@@ -10,7 +10,7 @@ from omni.isaac.lab.app import AppLauncher
 
 parser = argparse.ArgumentParser(description="Train an RL agent with HARL.")
 parser.add_argument(
-        "--algorihm",
+        "--algorithm",
         type=str,
         default="happo",
         choices=[
@@ -75,7 +75,7 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     args = args_cli.__dict__
 
     args['env'] = 'isaaclab'
-    args['algo'] = args['algorihm']
+    args['algo'] = args['algorithm']
     args["exp_name"] = 'play'
 
     algo_args = agent_cfg
@@ -95,7 +95,15 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     runner = RUNNER_REGISTRY[args["algo"]](args, algo_args, env_args)
     
     obs, _, _ = runner.env.reset()
-    actions = np.zeros((args['num_envs'],runner.num_agents, runner.env.action_space[0].shape[0]))
+
+    max_action_space = 0
+
+    for agent_id, obs_space in runner.env.action_space.items():
+        if obs_space.shape[0] > max_action_space:
+            max_action_space = obs_space.shape[0]
+        
+
+    actions = np.zeros((args['num_envs'],runner.num_agents, max_action_space), dtype=np.float32)
     rnn_states = np.zeros(  
         (
             args['num_envs'],
@@ -118,8 +126,8 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
             # agent stepping
             for agent_id in range(runner.num_agents):
                 action, _, rnn_state = runner.actor[agent_id].get_actions(obs[:,agent_id,:],rnn_states[:,agent_id,:],masks[:,agent_id,:],None,None)
-
-                actions[:, agent_id, :] = action.cpu().numpy()
+                action_space = action.shape[1]
+                actions[:, agent_id, :action_space] = action.cpu().numpy()
                 rnn_states[:, agent_id, :] = rnn_state.cpu().numpy()
 
             obs, _, rewards, dones, _, _ = runner.env.step(actions)
