@@ -535,7 +535,6 @@ class AnymalCMultiAgent(DirectMARLEnv):
         # self._commands[:,0] = 1
         # self._commands[:, 2] = 0
 
-
         for _, robot in self.robots.items():
             if env_ids is None or len(env_ids) == self.num_envs:
                 env_ids = robot._ALL_INDICES
