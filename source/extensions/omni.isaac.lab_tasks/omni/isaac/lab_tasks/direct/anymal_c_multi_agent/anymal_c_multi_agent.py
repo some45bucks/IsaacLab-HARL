@@ -395,7 +395,8 @@ class AnymalCMultiAgent(DirectMARLEnv):
 
         for robot_id, robot in self.robots.items():
             # linear velocity tracking
-            lin_vel_error = torch.sum(torch.square(self._commands[:, :2] - self.object.data.root_com_lin_vel_b[:, :2]), dim=1) #changing this to the bar
+            bar_commands = torch.stack([self._commands[:,1], self._commands[:,0], self._commands[:,2]]).t()
+            lin_vel_error = torch.sum(torch.square(bar_commands[:, :2] - self.object.data.root_com_lin_vel_b[:, :2]), dim=1) #changing this to the bar
             lin_vel_error_mapped = torch.exp(-lin_vel_error) 
             # yaw rate tracking
             yaw_rate_error = torch.square(self._commands[:, 2] - self.object.data.root_com_ang_vel_b[:, 2])
@@ -525,9 +526,9 @@ class AnymalCMultiAgent(DirectMARLEnv):
         # command[:, 0] = 1.0
         # self._commands = {agent : command for agent in self.cfg.possible_agents}
         # self._commands = torch.zeros(self.num_envs, 3, device=self.device).uniform_(-1.0, 1.0)
-        self._commands = torch.zeros(self.num_envs, 3, device=self.device)
-        self._commands[:,0] = 1
-        # self._commands[:, 2] = 0
+        self._commands = torch.zeros(self.num_envs, 3, device=self.device).uniform_(-1.0, 1.0)
+        # self._commands[:,0] = 1
+        self._commands[:, 2] = 0
 
 
         for _, robot in self.robots.items():
