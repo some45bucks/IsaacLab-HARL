@@ -7,7 +7,20 @@ Use these instructions to install isaac sim -> [here](https://docs.omniverse.nvi
 
 Then install the following version of gymnasium, make sure to do all this with  your isaaclab conda env activated.
 
+
+
 ```bash
+cd IsaacLab
+./isaaclab.sh -i
+```
+
+# Install the HARL lib from sorce: 
+HARL can be found ->[here](https://github.com/some45bucks/HARL.git)
+
+```bash
+git clone https://github.com/some45bucks/HARL.git
+cd HARL
+pip install -e .
 pip install gymnasium==0.29.0
 ```
 
