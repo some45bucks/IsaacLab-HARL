@@ -32,6 +32,7 @@ parser.add_argument("--task", type=str, default=None, help="Name of the task.")
 parser.add_argument("--seed", type=int, default=None, help="Seed used for the environment")
 parser.add_argument("--num_env_steps", type=int, default=None, help="RL Policy training iterations.")
 parser.add_argument("--dir", type=str, default=None, help="folder with trained models")
+parser.add_argument("--use_control", type=bool, default=False, help="Set commands yourself")
 
 # append AppLauncher cli args
 AppLauncher.add_app_launcher_args(parser)
@@ -130,7 +131,12 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
                 actions[:, agent_id, :action_space] = action.cpu().numpy()
                 rnn_states[:, agent_id, :] = rnn_state.cpu().numpy()
 
+            if args["use_control"]:
+                control_vector = torch.tensor([0,0,1], dtype=torch.float64)
+                runner.env.unwrapped._commands[:,:] = control_vector
+
             obs, _, rewards, dones, _, _ = runner.env.step(actions)
+
             total_rewards += rewards
             print(f"Average reward: {rewards.mean(axis=0)}")
             print(f"Total reward: {total_rewards.mean(axis=0)}")
