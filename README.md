@@ -13,8 +13,27 @@ Use these instructions to install isaac sim -> [here](https://docs.omniverse.nvi
 
 Then install the following version of gymnasium, make sure to do all this with  your isaaclab conda env activated.
 
+
+
 ```bash
+cd IsaacLab
+./isaaclab.sh -i
+```
+
+# Install the HARL lib from sorce: 
+HARL can be found ->[here](https://github.com/some45bucks/HARL.git)
+
+```bash
+git clone https://github.com/some45bucks/HARL.git
+cd HARL
+pip install -e .
 pip install gymnasium==0.29.0
+```
+
+Then an example script for running the mult agent bar environment
+
+```bash
+python train.py --task Isaac-Multi-Agent-Flat-Anymal-C-Direct-v0 --video_interval 10_000 --num_envs 2048 --save_interval 10 --log_interval 10 --algorithm happo --headless --num_env_steps 2_000_000_000
 ```
 
 # Isaac Lab
