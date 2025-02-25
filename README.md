@@ -30,6 +30,12 @@ pip install -e .
 pip install gymnasium==0.29.0
 ```
 
+Then an example script for running the mult agent bar environment
+
+```bash
+python train.py --task Isaac-Multi-Agent-Flat-Anymal-C-Direct-v0 --video_interval 10_000 --num_envs 2048 --save_interval 10 --log_interval 10 --algorithm happo --headless --num_env_steps 2_000_000_000
+```
+
 # Isaac Lab
 
 [![IsaacSim](https://img.shields.io/badge/IsaacSim-4.2.0-silver.svg)](https://docs.omniverse.nvidia.com/isaacsim/latest/overview.html)
