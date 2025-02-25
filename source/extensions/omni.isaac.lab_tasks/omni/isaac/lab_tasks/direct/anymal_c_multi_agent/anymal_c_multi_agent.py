@@ -85,10 +85,20 @@ def define_markers() -> VisualizationMarkers:
         markers={
             "sphere1": sim_utils.SphereCfg(
                 radius=0.1,
-                visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(0.0, 0.0, 1.0)),
+                visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(.8, 0.0, 0.0)),
             ),
             "sphere2": sim_utils.SphereCfg(
                 radius=0.1,
+                visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(0.0, 1.0, 1.0)),
+            ),
+            "arrow1": sim_utils.UsdFileCfg(
+                usd_path=f"{ISAAC_NUCLEUS_DIR}/Props/UIElements/arrow_x.usd",
+                scale=(.1, .1, 1.0),
+                visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(.8, 0.0, 0.0)),
+            ),
+            "arrow2": sim_utils.UsdFileCfg(
+                usd_path=f"{ISAAC_NUCLEUS_DIR}/Props/UIElements/arrow_x.usd",
+                scale=(.1, .1, 1.0),
                 visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(0.0, 1.0, 1.0)),
             ),
         },
@@ -270,8 +280,8 @@ class AnymalCMultiAgent(DirectMARLEnv):
         super().__init__(cfg, render_mode, **kwargs)
         # Joint position command (deviation from default joint positions)
 
-        self.actions = {agent : torch.zeros(self.num_envs, action_space, device=self.device) for agent, action_space in self.cfg.action_spaces.items()}
-        self.previous_actions = {agent : torch.zeros(self.num_envs, action_space, device=self.device) for agent, action_space in self.cfg.action_spaces.items()}
+        self.actions = {agent : torch.zeros(self.num_envs, action_space, device=self.device, dtype=torch.float64) for agent, action_space in self.cfg.action_spaces.items()}
+        self.previous_actions = {agent : torch.zeros(self.num_envs, action_space, device=self.device, dtype=torch.float64) for agent, action_space in self.cfg.action_spaces.items()}
         # X/Y linear velocity and yaw angular velocity commands
         # self._commands = {agent : torch.zeros(self.num_envs, 3, device=self.device) for agent in self.cfg.possible_agents}
         self._commands = torch.zeros(self.num_envs, 3, device=self.device)
@@ -360,14 +370,7 @@ class AnymalCMultiAgent(DirectMARLEnv):
         
         obs = {}
 
-        xy_commands = self._commands.clone()
-        xy_commands[:,2] = 0
-
-        marker_ids = torch.concat([torch.zeros(2*self._commands.shape[0]),torch.ones(self._commands.shape[0])], axis=0)
-
-        marker_locations = torch.concat([self.object.data.body_com_pos_w.squeeze(1),self.object.data.body_com_pos_w.squeeze(1)+xy_commands,self.object.data.body_com_pos_w.squeeze(1)+self.object.data.root_com_lin_vel_b], axis=0)
-        marker_orientations = quat_from_angle_axis(torch.zeros(marker_locations.shape[0]), torch.tensor([0.0, 0.0, 1.0]))
-        self.my_visualizer.visualize(marker_locations,marker_orientations, marker_indices=marker_ids)
+        
         # self.my_visualizer.visualize(marker_locations+self._commands,marker_orientations)
 
         for robot_id, robot in self.robots.items():
@@ -397,6 +400,57 @@ class AnymalCMultiAgent(DirectMARLEnv):
         y_euler_angle = torch.arcsin(2 * (w * y - z * x))
         return y_euler_angle
     
+    def _draw_markers(self, command):
+        xy_commands = command.clone()
+        z_commands = xy_commands[:,2].clone()
+        xy_commands[:,2] = 0
+
+        marker_ids = torch.concat([
+            0*torch.zeros(2*self._commands.shape[0]),
+            1*torch.ones(self._commands.shape[0]),
+            2*torch.ones(self._commands.shape[0]),
+            3*torch.ones(self._commands.shape[0])
+        ], axis=0)
+
+        bar_pos = self.object.data.body_com_pos_w.squeeze(1).clone()
+        bar_yaw = self.object.data.root_com_ang_vel_b[:, 2].clone()
+
+        scale1 = torch.ones((self._commands.shape[0],3), device=self.device)
+        scale1[:,0] = torch.abs(z_commands)
+
+        scale2 = torch.ones((self._commands.shape[0],3), device=self.device)
+        scale2[:,0] = torch.abs(bar_yaw)
+
+        offset1 = torch.zeros((self._commands.shape[0],3), device=self.device)
+        offset1[:, 1] = 0
+
+        offset2 = torch.zeros((self._commands.shape[0],3), device=self.device)
+        offset2[:, 1] = 0
+
+        _90 = (-3.14/2)*torch.ones(self._commands.shape[0]).to(self.device)
+        
+        marker_orientations = quat_from_angle_axis(torch.concat([
+            torch.zeros(3*self._commands.shape[0]).to(self.device),
+            torch.sign(z_commands)*_90,
+            torch.sign(bar_yaw)*_90
+        ], axis=0), torch.tensor([0.0, 1.0, 0.0],device=self.device))
+
+        marker_scales = torch.concat([
+            torch.ones((3*self._commands.shape[0],3), device=self.device),
+            scale1,
+            scale2
+        ], axis=0)
+
+        marker_locations = torch.concat([
+            bar_pos,
+            bar_pos+xy_commands,
+            bar_pos+self.object.data.root_com_lin_vel_b,
+            bar_pos+offset1,
+            bar_pos+offset2
+        ], axis=0)
+
+        self.my_visualizer.visualize(marker_locations, marker_orientations,scales=marker_scales ,marker_indices=marker_ids)
+
     def _get_rewards(self) -> dict:
         reward = {}
 
@@ -408,10 +462,14 @@ class AnymalCMultiAgent(DirectMARLEnv):
         if torch.any(timeouts):
             a = 1
 
+        bar_commands = torch.stack([-self._commands[:,1], self._commands[:,0], self._commands[:,2]]).t()
+
+        self._draw_markers(bar_commands)
+
         for robot_id, robot in self.robots.items():
             # linear velocity tracking
-            bar_commands = torch.stack([self._commands[:,1], self._commands[:,0], self._commands[:,2]]).t()
-            lin_vel_error = torch.sum(torch.square(bar_commands[:, :2] - self.object.data.root_com_lin_vel_b[:, :2]), dim=1) #changing this to the bar
+            
+            lin_vel_error = torch.sum(torch.square(bar_commands[:, :2] - self.object.data.root_com_lin_vel_b[:, :2]), dim=1)
             lin_vel_error_mapped = torch.exp(-lin_vel_error) 
             # yaw rate tracking
             yaw_rate_error = torch.square(self._commands[:, 2] - self.object.data.root_com_ang_vel_b[:, 2])
@@ -503,8 +561,6 @@ class AnymalCMultiAgent(DirectMARLEnv):
     def _get_timeouts(self):
         return self.episode_length_buf >= self.max_episode_length - 1
 
-
-    #TODO: Implement a dones function that handles multiple robots 
     def _get_dones(self) -> tuple[dict, dict]:
         #y_euler_angle = self.get_y_euler_from_quat(self.object.data.root_com_quat_w) 
         # if the angle of the bar > pi/64 reset
@@ -531,8 +587,8 @@ class AnymalCMultiAgent(DirectMARLEnv):
 
         # Joint position command (deviation from default joint positions)
         for agent, action_space in self.cfg.action_spaces.items():
-            self.actions[agent][env_ids] = torch.zeros(env_ids.shape[0], action_space, device=self.device)
-            self.previous_actions[agent][env_ids] = torch.zeros(env_ids.shape[0], action_space, device=self.device)
+            self.actions[agent][env_ids] = torch.zeros(env_ids.shape[0], action_space, device=self.device, dtype=torch.float64)
+            self.previous_actions[agent][env_ids] = torch.zeros(env_ids.shape[0], action_space, device=self.device, dtype=torch.float64)
 
 
         # self.actions = {agent : torch.zeros(self.num_envs, action_space, device=self.device) for agent, action_space in self.cfg.action_spaces.items()}

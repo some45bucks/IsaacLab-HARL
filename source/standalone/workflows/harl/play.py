@@ -103,7 +103,7 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
             max_action_space = obs_space.shape[0]
         
 
-    actions = np.zeros((args['num_envs'],runner.num_agents, max_action_space), dtype=np.float32)
+    actions = np.zeros((args['num_envs'],runner.num_agents, max_action_space), dtype=np.float64)
     rnn_states = np.zeros(  
         (
             args['num_envs'],
@@ -111,15 +111,15 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
             runner.recurrent_n,
             runner.rnn_hidden_size,
         ),
-        dtype=np.float32,
+        dtype=np.float64,
     )
     masks = np.ones(
             (args['num_envs'], runner.num_agents, 1),
-            dtype=np.float32,
+            dtype=np.float64,
         )
 
     # simulate environment
-    total_rewards = np.zeros((args['num_envs'], runner.num_agents,1), dtype=np.float32)
+    total_rewards = np.zeros((args['num_envs'], runner.num_agents,1), dtype=np.float64)
     while simulation_app.is_running():
         # run everything in inference mode
         with torch.inference_mode():
@@ -135,9 +135,9 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
             print(f"Average reward: {rewards.mean(axis=0)}")
             print(f"Total reward: {total_rewards.mean(axis=0)}")
             dones_env = np.all(dones, axis=1)
-            masks = np.ones((args['num_envs'], runner.num_agents, 1),dtype=np.float32,)
-            masks[dones_env == True] = np.zeros(((dones_env == True).sum(), runner.num_agents, 1), dtype=np.float32)
-            rnn_states[dones_env == True] = np.zeros(((dones_env == True).sum(),runner.num_agents,runner.recurrent_n,runner.rnn_hidden_size),dtype=np.float32)
+            masks = np.ones((args['num_envs'], runner.num_agents, 1),dtype=np.float64,)
+            masks[dones_env == True] = np.zeros(((dones_env == True).sum(), runner.num_agents, 1), dtype=np.float64)
+            rnn_states[dones_env == True] = np.zeros(((dones_env == True).sum(),runner.num_agents,runner.recurrent_n,runner.rnn_hidden_size),dtype=np.float64)
 
     runner.env.close()
 
