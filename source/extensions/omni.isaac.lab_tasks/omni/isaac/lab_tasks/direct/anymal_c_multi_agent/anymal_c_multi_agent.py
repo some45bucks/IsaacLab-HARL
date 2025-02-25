@@ -504,7 +504,7 @@ class AnymalCMultiAgent(DirectMARLEnv):
 
         return {key:time_out for key in self.robots.keys()}, {key:dones for key in self.robots.keys()}
     
-    def _reset_idx(self, env_ids: torch.Tensor | None):
+    def _reset_idx(self, env_ids: torch.Tensor):
         super()._reset_idx(env_ids)
 
         object_default_state = self.object.data.default_root_state.clone()[env_ids]
@@ -512,11 +512,16 @@ class AnymalCMultiAgent(DirectMARLEnv):
             object_default_state[:, 0:3] + self.scene.env_origins[env_ids]
         )
         self.object.write_root_state_to_sim(object_default_state, env_ids)
-        # self.object.reset(env_ids)
+        self.object.reset(env_ids)
 
         # Joint position command (deviation from default joint positions)
-        self.actions = {agent : torch.zeros(self.num_envs, action_space, device=self.device) for agent, action_space in self.cfg.action_spaces.items()}
-        self.previous_actions = {agent : torch.zeros(self.num_envs, action_space, device=self.device) for agent, action_space in self.cfg.action_spaces.items()}
+        for agent, action_space in self.cfg.action_spaces.items():
+            self.actions[agent][env_ids] = torch.zeros(env_ids.shape[0], action_space, device=self.device)
+            self.previous_actions[agent][env_ids] = torch.zeros(env_ids.shape[0], action_space, device=self.device)
+
+
+        # self.actions = {agent : torch.zeros(self.num_envs, action_space, device=self.device) for agent, action_space in self.cfg.action_spaces.items()}
+        # self.previous_actions = {agent : torch.zeros(self.num_envs, action_space, device=self.device) for agent, action_space in self.cfg.action_spaces.items()}
 
         # X/Y linear velocity and yaw angular velocity commands
         # command = torch.zeros(self.num_envs, 3, device=self.device).uniform_(-1.0, 1.0)
@@ -526,7 +531,7 @@ class AnymalCMultiAgent(DirectMARLEnv):
         # command[:, 0] = 1.0
         # self._commands = {agent : command for agent in self.cfg.possible_agents}
         # self._commands = torch.zeros(self.num_envs, 3, device=self.device).uniform_(-1.0, 1.0)
-        self._commands = torch.zeros(self.num_envs, 3, device=self.device).uniform_(-1.0, 1.0)
+        self._commands[env_ids] = torch.zeros_like(self._commands[env_ids]).uniform_(-1.0, 1.0)
         # self._commands[:,0] = 1
         self._commands[:, 2] = 0
 
