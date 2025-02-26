@@ -32,6 +32,7 @@ parser.add_argument("--task", type=str, default=None, help="Name of the task.")
 parser.add_argument("--seed", type=int, default=None, help="Seed used for the environment")
 parser.add_argument("--num_env_steps", type=int, default=None, help="RL Policy training iterations.")
 parser.add_argument("--dir", type=str, default=None, help="folder with trained models")
+parser.add_argument("--use_control", type=bool, default=False, help="Set commands yourself")
 
 # append AppLauncher cli args
 AppLauncher.add_app_launcher_args(parser)
@@ -103,7 +104,7 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
             max_action_space = obs_space.shape[0]
         
 
-    actions = np.zeros((args['num_envs'],runner.num_agents, max_action_space), dtype=np.float32)
+    actions = np.zeros((args['num_envs'],runner.num_agents, max_action_space), dtype=np.float64)
     rnn_states = np.zeros(  
         (
             args['num_envs'],
@@ -111,15 +112,15 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
             runner.recurrent_n,
             runner.rnn_hidden_size,
         ),
-        dtype=np.float32,
+        dtype=np.float64,
     )
     masks = np.ones(
             (args['num_envs'], runner.num_agents, 1),
-            dtype=np.float32,
+            dtype=np.float64,
         )
 
     # simulate environment
-    total_rewards = np.zeros((args['num_envs'], runner.num_agents,1), dtype=np.float32)
+    total_rewards = np.zeros((args['num_envs'], runner.num_agents,1), dtype=np.float64)
     while simulation_app.is_running():
         # run everything in inference mode
         with torch.inference_mode():
@@ -130,14 +131,19 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
                 actions[:, agent_id, :action_space] = action.cpu().numpy()
                 rnn_states[:, agent_id, :] = rnn_state.cpu().numpy()
 
+            if args["use_control"]:
+                control_vector = torch.tensor([0,0,1], dtype=torch.float64)
+                runner.env.unwrapped._commands[:,:] = control_vector
+
             obs, _, rewards, dones, _, _ = runner.env.step(actions)
+
             total_rewards += rewards
             print(f"Average reward: {rewards.mean(axis=0)}")
             print(f"Total reward: {total_rewards.mean(axis=0)}")
             dones_env = np.all(dones, axis=1)
-            masks = np.ones((args['num_envs'], runner.num_agents, 1),dtype=np.float32,)
-            masks[dones_env == True] = np.zeros(((dones_env == True).sum(), runner.num_agents, 1), dtype=np.float32)
-            rnn_states[dones_env == True] = np.zeros(((dones_env == True).sum(),runner.num_agents,runner.recurrent_n,runner.rnn_hidden_size),dtype=np.float32)
+            masks = np.ones((args['num_envs'], runner.num_agents, 1),dtype=np.float64,)
+            masks[dones_env == True] = np.zeros(((dones_env == True).sum(), runner.num_agents, 1), dtype=np.float64)
+            rnn_states[dones_env == True] = np.zeros(((dones_env == True).sum(),runner.num_agents,runner.recurrent_n,runner.rnn_hidden_size),dtype=np.float64)
 
     runner.env.close()
 

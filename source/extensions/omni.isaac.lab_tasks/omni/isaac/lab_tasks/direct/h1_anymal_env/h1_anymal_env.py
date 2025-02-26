@@ -451,7 +451,7 @@ class HeterogeneousMultiAgent(DirectMARLEnv):
 
         robot_id = "robot_0"
         robot = self.robots[robot_id]
-        anymal_commands = torch.stack([self._commands[:,1], self._commands[:,0], self._commands[:,2]]).t()
+        anymal_commands = torch.stack([self._commands[:,1], -self._commands[:,0], self._commands[:,2]]).t()
         obs[robot_id] = (torch.cat(
         [
             tensor
@@ -563,6 +563,7 @@ class HeterogeneousMultiAgent(DirectMARLEnv):
         # command[:, 0] = 1.0
         self._commands = torch.zeros(self.num_envs, 3, device=self.device)
         self._commands[:, 1] = 0.5
+        self._commands[:, 0] = 0.5
 
         ### reset idx for h1 ###
         if env_ids is None or len(env_ids) == self.num_envs:
