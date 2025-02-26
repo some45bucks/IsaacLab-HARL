@@ -14,6 +14,9 @@
 **/*.usdc
 **/*.usdz
 
+# no textures allowed in the repo dont track textures folder
+**/textures/*
+
 # Python
 .DS_Store
 **/*.egg-info/
