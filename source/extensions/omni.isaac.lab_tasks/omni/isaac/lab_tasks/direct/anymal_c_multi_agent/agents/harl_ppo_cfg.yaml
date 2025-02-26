@@ -18,7 +18,7 @@ train:
   num_env_steps: 10000000
   # number of steps per environment per training data collection
   episode_length: 200
-  # logging interval
+  # logging interval, also the interval by which the average done reward is checked
   log_interval: 5
   # evaluation interval
   eval_interval: 25

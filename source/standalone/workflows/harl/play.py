@@ -132,7 +132,7 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
                 rnn_states[:, agent_id, :] = rnn_state.cpu().numpy()
 
             if args["use_control"]:
-                control_vector = torch.tensor([0,0,1], dtype=torch.float64)
+                control_vector = torch.tensor([0,1,0], dtype=torch.float64)
                 runner.env.unwrapped._commands[:,:] = control_vector
 
             obs, _, rewards, dones, _, _ = runner.env.step(actions)

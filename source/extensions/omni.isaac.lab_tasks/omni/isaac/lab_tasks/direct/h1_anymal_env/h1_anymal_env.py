@@ -346,6 +346,57 @@ class HeterogeneousMultiAgent(DirectMARLEnv):
         light_cfg = sim_utils.DomeLightCfg(intensity=2000.0, color=(0.75, 0.75, 0.75))
         light_cfg.func("/World/Light", light_cfg)
 
+    def _draw_markers(self, command):
+            xy_commands = command.clone()
+            z_commands = xy_commands[:,2].clone()
+            xy_commands[:,2] = 0
+
+            marker_ids = torch.concat([
+                0*torch.zeros(2*self._commands.shape[0]),
+                1*torch.ones(self._commands.shape[0]),
+                2*torch.ones(self._commands.shape[0]),
+                3*torch.ones(self._commands.shape[0])
+            ], axis=0)
+
+            bar_pos = self.object.data.body_com_pos_w.squeeze(1).clone()
+            bar_yaw = self.object.data.root_com_ang_vel_b[:, 2].clone()
+
+            scale1 = torch.ones((self._commands.shape[0],3), device=self.device)
+            scale1[:,0] = torch.abs(z_commands)
+
+            scale2 = torch.ones((self._commands.shape[0],3), device=self.device)
+            scale2[:,0] = torch.abs(bar_yaw)
+
+            offset1 = torch.zeros((self._commands.shape[0],3), device=self.device)
+            offset1[:, 1] = 0
+
+            offset2 = torch.zeros((self._commands.shape[0],3), device=self.device)
+            offset2[:, 1] = 0
+
+            _90 = (-3.14/2)*torch.ones(self._commands.shape[0]).to(self.device)
+            
+            marker_orientations = quat_from_angle_axis(torch.concat([
+                torch.zeros(3*self._commands.shape[0]).to(self.device),
+                torch.sign(z_commands)*_90,
+                torch.sign(bar_yaw)*_90
+            ], axis=0), torch.tensor([0.0, 1.0, 0.0],device=self.device))
+
+            marker_scales = torch.concat([
+                torch.ones((3*self._commands.shape[0],3), device=self.device),
+                scale1,
+                scale2
+            ], axis=0)
+
+            marker_locations = torch.concat([
+                bar_pos,
+                bar_pos+xy_commands,
+                bar_pos+self.object.data.root_com_lin_vel_b,
+                bar_pos+offset1,
+                bar_pos+offset2
+            ], axis=0)
+
+            self.my_visualizer.visualize(marker_locations, marker_orientations,scales=marker_scales ,marker_indices=marker_ids)
+
     def _pre_physics_step(self, actions: dict):
         # We need to process the actions for each scene independently
         self.processed_actions = copy.deepcopy(actions)
@@ -481,13 +532,21 @@ class HeterogeneousMultiAgent(DirectMARLEnv):
     def _get_rewards(self) -> dict:
         reward = {}
 
+        bar_commands = torch.stack([-self._commands[:,1], self._commands[:,0], self._commands[:,2]]).t()
+
+        self._draw_markers(bar_commands)
+
         for robot_id, _ in self.robots.items():
             # linear velocity tracking
             lin_vel_error = torch.sum(torch.square(self._commands[:, :2] - self.object.data.root_com_lin_vel_b[:, :2]), dim=1) #changing this to the bar
             lin_vel_error_mapped = torch.exp(-lin_vel_error) 
 
+            yaw_rate_error = torch.square(self._commands[:, 2] - self.object.data.root_com_ang_vel_b[:, 2])
+            yaw_rate_error_mapped = torch.exp(-yaw_rate_error)
+
             rewards = {
                 "track_lin_vel_xy_exp": lin_vel_error_mapped * self.cfg.lin_vel_reward_scale * self.step_dt,
+                "track_ang_vel_z_exp": yaw_rate_error_mapped * self.cfg.yaw_rate_reward_scale * self.step_dt,
             }
             curr_reward = torch.sum(torch.stack(list(rewards.values())), dim=0)
 
