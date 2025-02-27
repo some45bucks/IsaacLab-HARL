@@ -158,7 +158,8 @@ class HeterogeneousMultiAgentFlatEnvCfg(DirectMARLEnvCfg):
     cfg_rec_prism: RigidObjectCfg = RigidObjectCfg(
         prim_path="/World/envs/env_.*/object",
         spawn=sim_utils.UsdFileCfg(
-            usd_path=f"GrandPiano_instanceable_meshes.usd",
+            # usd_path=f"assets/GrandPiano_instanceable_meshes.usd",
+            usd_path=f"assets/GrandPiano_instanceable_meshes.usda",
             rigid_props=sim_utils.RigidBodyPropertiesCfg(
                 kinematic_enabled=False,
                 disable_gravity=False,
