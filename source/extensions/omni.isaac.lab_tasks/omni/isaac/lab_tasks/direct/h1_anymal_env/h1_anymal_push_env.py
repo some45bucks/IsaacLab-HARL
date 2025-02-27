@@ -7,7 +7,6 @@ from __future__ import annotations
 
 import gymnasium as gym
 import torch
-import omni.isaac.core.utils.prims as prims_utils
 import omni.isaac.lab.envs.mdp as mdp
 import omni.isaac.lab.sim as sim_utils
 from omni.isaac.lab.markers import VisualizationMarkers, VisualizationMarkersCfg
@@ -30,7 +29,6 @@ from omni.isaac.lab.utils.math import quat_from_angle_axis
 ##
 from omni.isaac.lab_assets.anymal import ANYMAL_C_CFG  # isort: skip
 from omni.isaac.lab_assets.unitree import H1_CFG   # isort: skip
-from omni.isaac.lab_assets.pallet import PALLET_CFG   # isort: skip
 from omni.isaac.lab.terrains.config.rough import ROUGH_TERRAINS_CFG  # isort: skip
 from omni.isaac.lab.utils.assets import ISAACLAB_NUCLEUS_DIR
 
