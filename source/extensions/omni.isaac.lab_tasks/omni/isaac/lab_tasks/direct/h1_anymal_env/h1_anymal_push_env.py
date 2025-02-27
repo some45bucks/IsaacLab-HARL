@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import gymnasium as gym
 import torch
-
+import omni.isaac.core.utils.prims as prims_utils
 import omni.isaac.lab.envs.mdp as mdp
 import omni.isaac.lab.sim as sim_utils
 from omni.isaac.lab.markers import VisualizationMarkers, VisualizationMarkersCfg
@@ -30,8 +30,9 @@ from omni.isaac.lab.utils.math import quat_from_angle_axis
 ##
 from omni.isaac.lab_assets.anymal import ANYMAL_C_CFG  # isort: skip
 from omni.isaac.lab_assets.unitree import H1_CFG   # isort: skip
+from omni.isaac.lab_assets.pallet import PALLET_CFG   # isort: skip
 from omni.isaac.lab.terrains.config.rough import ROUGH_TERRAINS_CFG  # isort: skip
-
+from omni.isaac.lab.utils.assets import ISAACLAB_NUCLEUS_DIR
 
 def normalize_angle(x):
     return torch.atan2(torch.sin(x), torch.cos(x))
@@ -64,18 +65,6 @@ class EventCfg:
         },
     )
 
-    physics_material_2 = EventTerm(
-        func=mdp.randomize_rigid_body_material,
-        mode="startup",
-        params={
-            "asset_cfg": SceneEntityCfg("robot_2", body_names=".*"),
-            "static_friction_range": (0.8, 0.8),
-            "dynamic_friction_range": (0.6, 0.6),
-            "restitution_range": (0.0, 0.0),
-            "num_buckets": 64,
-        },
-    )
-
     add_base_mass_0 = EventTerm(
         func=mdp.randomize_rigid_body_mass,
         mode="startup",
@@ -90,17 +79,7 @@ class EventCfg:
         func=mdp.randomize_rigid_body_mass,
         mode="startup",
         params={
-            "asset_cfg": SceneEntityCfg("robot_1", body_names="base"),
-            "mass_distribution_params": (-5.0, 5.0),
-            "operation": "add",
-        },
-    )
-
-    add_base_mass_2 = EventTerm(
-        func=mdp.randomize_rigid_body_mass,
-        mode="startup",
-        params={
-            "asset_cfg": SceneEntityCfg("robot_2", body_names="pelvis"),
+            "asset_cfg": SceneEntityCfg("robot_1", body_names="pelvis"),
             "mass_distribution_params": (-5.0, 5.0),
             "operation": "add",
         },
@@ -108,18 +87,18 @@ class EventCfg:
 
 
 @configclass
-class HeterogeneousMultiAgentFlatEnvCfg(DirectMARLEnvCfg):
+class HeterogeneousPushMultiAgentFlatEnvCfg(DirectMARLEnvCfg):
     # env
     episode_length_s = 20.0
     decimation = 4
     anymal_action_scale = 0.5
     action_space = 12
-    action_spaces = {f"robot_0": 12,f"robot_1": 12, f"robot_2":19}
+    action_spaces = {f"robot_0": 12, f"robot_1":19}
 
-    observation_spaces = {f"robot_0": 48,f"robot_1": 48, f"robot_2":72}
+    observation_spaces = {f"robot_0": 48, f"robot_1":72}
     state_space = 0
-    state_spaces = {f"robot_{i}": 0 for i in range(3)}
-    possible_agents = ["robot_0","robot_1", "robot_2"]
+    state_spaces = {f"robot_{i}": 0 for i in range(2)}
+    possible_agents = ["robot_0","robot_1"]
 
     # simulation
     sim: SimulationCfg = SimulationCfg(
@@ -159,31 +138,24 @@ class HeterogeneousMultiAgentFlatEnvCfg(DirectMARLEnvCfg):
     contact_sensor_0: ContactSensorCfg = ContactSensorCfg(
         prim_path="/World/envs/env_.*/Robot_0/.*", history_length=3, update_period=0.005, track_air_time=True
     )
-    robot_0.init_state.rot = (1.0, 0.0, 0.0, 1)
+    robot_0.init_state.rot = (1.0, 0.0, 0.0, 1.)
     robot_0.init_state.pos = (-1.0, 0.0, .5)
 
-    robot_1: ArticulationCfg = ANYMAL_C_CFG.replace(prim_path="/World/envs/env_.*/Robot_1")
-    contact_sensor_1: ContactSensorCfg = ContactSensorCfg(
-        prim_path="/World/envs/env_.*/Robot_1/.*", history_length=3, update_period=0.005, track_air_time=True
-    )
-    robot_1.init_state.rot = (1.0, 0.0, 0.0, 1)
-    robot_1.init_state.pos = (1.0, 0.0, .5)
-
-    robot_2: ArticulationCfg = H1_CFG.replace(prim_path="/World/envs/env_.*/Robot_2")
-    robot_2.init_state.rot = (1.0, 0.0, 0.0, 1)
-    robot_2.init_state.pos = (0, 0.0, 1.9)
+    robot_1: ArticulationCfg = H1_CFG.replace(prim_path="/World/envs/env_.*/Robot_1")
+    robot_1.init_state.rot = (1.0, 0.0, 0.0, 1.)
+    robot_1.init_state.pos = (1.0, 0.0, 1.)
 
     # rec prism
     cfg_rec_prism= RigidObjectCfg(
         prim_path="/World/envs/env_.*/Object",
         spawn=sim_utils.CuboidCfg( 
-            size=(3,2,.15),
+            size=(3,2,2),
             rigid_props=sim_utils.RigidBodyPropertiesCfg(),
-            mass_props=sim_utils.MassPropertiesCfg(mass=.2),
+            mass_props=sim_utils.MassPropertiesCfg(mass=50),
             collision_props=sim_utils.CollisionPropertiesCfg(),
-            visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(1,.65,0))
+            visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(0.,1.,0.))
         ),
-        init_state=RigidObjectCfg.InitialStateCfg(pos=(0.0, 0, .6), rot=(1.0, 0.0, 0.0, 0.0)), #started the bar lower
+        init_state=RigidObjectCfg.InitialStateCfg(pos=(0.0, 2, .6), rot=(1.0, 0.0, 0.0, 0.0)), #started the bar lower
     )
 
     # reward scales (override from flat config)
@@ -206,7 +178,7 @@ class HeterogeneousMultiAgentFlatEnvCfg(DirectMARLEnvCfg):
     h1_action_scale = 1.0
     termination_height: float = 0.8
     anymal_min_z_pos = 0.3
-    h1_min_z_pos = 1.0
+    h1_min_z_pos = 0.8
 
 
     joint_gears: list = [
@@ -233,7 +205,7 @@ class HeterogeneousMultiAgentFlatEnvCfg(DirectMARLEnvCfg):
 
 
 @configclass
-class HeterogeneousMultiAgentRoughEnvCfg(HeterogeneousMultiAgentFlatEnvCfg):
+class HeterogeneousPushMultiAgentRoughEnvCfg(HeterogeneousPushMultiAgentFlatEnvCfg):
     # env
     observation_space = 235
 
@@ -313,18 +285,18 @@ def define_markers() -> VisualizationMarkers:
     )
     return VisualizationMarkers(marker_cfg)
 
-class HeterogeneousMultiAgent(DirectMARLEnv):
-    cfg: HeterogeneousMultiAgentFlatEnvCfg | HeterogeneousMultiAgentRoughEnvCfg
+class HeterogeneousPushMultiAgent(DirectMARLEnv):
+    cfg: HeterogeneousPushMultiAgentFlatEnvCfg | HeterogeneousPushMultiAgentRoughEnvCfg
 
-    def __init__(self, cfg: HeterogeneousMultiAgentFlatEnvCfg | HeterogeneousMultiAgentRoughEnvCfg, render_mode: str | None = None, **kwargs):
+    def __init__(self, cfg: HeterogeneousPushMultiAgentFlatEnvCfg | HeterogeneousPushMultiAgentRoughEnvCfg, render_mode: str | None = None, **kwargs):
         super().__init__(cfg, render_mode, **kwargs)
         # Joint position command (deviation from default joint positions)
         self.actions = {agent : torch.zeros(self.num_envs, action_space, device=self.device) for agent, action_space in self.cfg.action_spaces.items()}
         self.previous_actions = {agent : torch.zeros(self.num_envs, action_space, device=self.device) for agent, action_space in self.cfg.action_spaces.items()}
-        self.base_bodies = ["base","base","pelvis"]
+        self.base_bodies = ["base","pelvis"]
         # X/Y linear velocity and yaw angular velocity commands
         self._commands = torch.zeros(self.num_envs, 3, device=self.device)
-        self._joint_dof_idx, _ = self.robots["robot_2"].find_joints(".*")
+        self._joint_dof_idx, _ = self.robots["robot_1"].find_joints(".*")
 
         # Logging
         self._episode_sums = {
@@ -422,11 +394,6 @@ class HeterogeneousMultiAgent(DirectMARLEnv):
         self.processed_actions[robot_id] = self.cfg.anymal_action_scale * self.actions[robot_id] + self.robots[robot_id].data.default_joint_pos
 
         robot_id = "robot_1"
-        robot_action_space = self.action_spaces[robot_id].shape[0]
-        self.actions[robot_id] = actions[robot_id][:,:robot_action_space].clone()
-        self.processed_actions[robot_id] = self.cfg.anymal_action_scale * self.actions[robot_id] + self.robots[robot_id].data.default_joint_pos
-
-        robot_id = "robot_2"
         self.actions[robot_id] = actions[robot_id].clone()
 
     def _get_anymal_fallen(self):
@@ -436,10 +403,6 @@ class HeterogeneousMultiAgent(DirectMARLEnv):
         agent_dones.append(died)
 
         robot = self.robots["robot_1"]
-        died = robot.data.body_com_pos_w[:,0,2].view(-1) < self.cfg.anymal_min_z_pos
-        agent_dones.append(died)
-
-        robot = self.robots["robot_2"]
         died = robot.data.body_com_pos_w[:,0,2].view(-1) < self.cfg.h1_min_z_pos
         agent_dones.append(died)
 
@@ -451,16 +414,13 @@ class HeterogeneousMultiAgent(DirectMARLEnv):
         self.robots[robot_id].set_joint_position_target(self.processed_actions[robot_id])
 
         robot_id = "robot_1"
-        self.robots[robot_id].set_joint_position_target(self.processed_actions[robot_id])
-
-        robot_id = "robot_2"
         forces = self.cfg.h1_action_scale * self.joint_gears * self.actions[robot_id]
         self.robots[robot_id].set_joint_effort_target(forces, joint_ids=self._joint_dof_idx)
 
     def _compute_intermediate_values(self):
-        self.torso_position, self.torso_rotation = self.robots["robot_2"].data.root_link_pos_w, self.robots["robot_2"].data.root_link_quat_w
-        self.velocity, self.ang_velocity = self.robots["robot_2"].data.root_com_lin_vel_w, self.robots["robot_2"].data.root_com_ang_vel_w
-        self.dof_pos, self.dof_vel = self.robots["robot_2"].data.joint_pos, self.robots["robot_2"].data.joint_vel
+        self.torso_position, self.torso_rotation = self.robots["robot_1"].data.root_link_pos_w, self.robots["robot_1"].data.root_link_quat_w
+        self.velocity, self.ang_velocity = self.robots["robot_1"].data.root_com_lin_vel_w, self.robots["robot_1"].data.root_com_ang_vel_w
+        self.dof_pos, self.dof_vel = self.robots["robot_1"].data.joint_pos, self.robots["robot_1"].data.joint_vel
 
         (
             self.up_proj,
@@ -483,8 +443,8 @@ class HeterogeneousMultiAgent(DirectMARLEnv):
             self.velocity,
             self.ang_velocity,
             self.dof_pos,
-            self.robots["robot_2"].data.soft_joint_pos_limits[0, :, 0],
-            self.robots["robot_2"].data.soft_joint_pos_limits[0, :, 1],
+            self.robots["robot_1"].data.soft_joint_pos_limits[0, :, 0],
+            self.robots["robot_1"].data.soft_joint_pos_limits[0, :, 1],
             self.inv_start_rot,
             self.basis_vec0,
             self.basis_vec1,
@@ -499,7 +459,7 @@ class HeterogeneousMultiAgent(DirectMARLEnv):
         # height_datas = {}
         # for robot_id, robot in self.robots.items():
         #     height_data = None
-        #     # if isinstance(self.cfg, HeterogeneousMultiAgentWalkingRoughEnvCfg):
+        #     # if isinstance(self.cfg, HeterogeneousPushMultiAgentWalkingRoughEnvCfg):
         #     if robot_id in self.height_scanners:
         #         height_data = (
         #             self.height_scanners[robot_id].data.pos_w[:, 2].unsqueeze(1) - self.height_scanners[robot_id].data.ray_hits_w[..., 2] - 0.5
@@ -511,7 +471,7 @@ class HeterogeneousMultiAgent(DirectMARLEnv):
 
         robot_id = "robot_0"
         robot = self.robots[robot_id]
-        anymal_commands = torch.zeros_like(self._commands)
+        # anymal_commands = torch.zeros_like(self._commands)
         obs[robot_id] = (torch.cat(
         [
             tensor
@@ -519,7 +479,7 @@ class HeterogeneousMultiAgent(DirectMARLEnv):
                 robot.data.root_com_lin_vel_b,
                 robot.data.root_com_ang_vel_b,
                 robot.data.projected_gravity_b,
-                anymal_commands,
+                self._commands,
                 robot.data.joint_pos - robot.data.default_joint_pos,
                 robot.data.joint_vel,
                 None,
@@ -531,26 +491,6 @@ class HeterogeneousMultiAgent(DirectMARLEnv):
         ))
 
         robot_id = "robot_1"
-        robot = self.robots[robot_id]
-        obs[robot_id] = (torch.cat(
-        [
-            tensor
-            for tensor in (
-                robot.data.root_com_lin_vel_b,
-                robot.data.root_com_ang_vel_b,
-                robot.data.projected_gravity_b,
-                anymal_commands,
-                robot.data.joint_pos - robot.data.default_joint_pos,
-                robot.data.joint_vel,
-                None,
-                self.actions[robot_id],
-            )
-            if tensor is not None
-        ],
-        dim=-1,
-        ))
-
-        robot_id = "robot_2"
         robot = self.robots[robot_id]
         obs[robot_id] = torch.cat(
             (
@@ -622,19 +562,14 @@ class HeterogeneousMultiAgent(DirectMARLEnv):
         # obj_vel = self.object.data.root_com_lin_vel_b.clone()
         # obj_vel[:, 2] = 0
 
-        anymal_1_vel = self.robots["robot_0"].data.root_com_lin_vel_b
-        anymal_2_vel = self.robots["robot_1"].data.root_com_lin_vel_b
-        h1_vel = self.robots["robot_2"].data.root_com_lin_vel_b
         obj_vel = self.object.data.root_com_lin_vel_b
 
-        all_vectors = torch.stack([anymal_1_vel, anymal_2_vel, h1_vel, obj_vel])
-        mean_vel = torch.mean(all_vectors, dim=0)
-        mean_vel[:, 2] = 0
+        obj_vel[:, 2] = 0
 
         marker_locations = torch.concat([
             bar_pos,
             bar_pos+xy_commands,
-            bar_pos+mean_vel,
+            bar_pos+obj_vel,
             bar_pos+offset1,
             bar_pos+offset2
         ], axis=0)
@@ -646,22 +581,21 @@ class HeterogeneousMultiAgent(DirectMARLEnv):
 
         bar_commands = torch.stack([-self._commands[:,1], self._commands[:,0], self._commands[:,2]]).t()
         self._draw_markers(bar_commands)
-
-        anymal_1_vel = self.robots["robot_0"].data.root_com_lin_vel_b[:, :2]
-        anymal_2_vel = self.robots["robot_1"].data.root_com_lin_vel_b[:, :2]
-        h1_vel = self.robots["robot_2"].data.root_com_lin_vel_b[:, :2]
-        obj_vel = self.object.data.root_com_lin_vel_b[:, :2]
-
-        all_vectors = torch.stack([anymal_1_vel, anymal_2_vel, h1_vel, obj_vel])
-        mean_vel = torch.mean(all_vectors, dim=0)
+        obj_xy_vel = self.object.data.root_com_lin_vel_b[:, :2]
+        obj_ang_vel = self.object.data.root_com_lin_vel_b[:, 2]
 
         for robot_id, _ in self.robots.items():
             # linear velocity tracking
-            lin_vel_error = torch.sum(torch.square(bar_commands[:, :2] - mean_vel), dim=1) #changing this to the bar
+            lin_vel_error = torch.sum(torch.square(bar_commands[:, :2] - obj_xy_vel), dim=1) #changing this to the bar
             lin_vel_error_mapped = torch.exp(-lin_vel_error) 
+            
+            # angular velocity tracking
+            yaw_rate_error = torch.square(self._commands[:, 2] - self.object.data.root_com_ang_vel_b[:, 2])
+            yaw_rate_error_mapped = torch.exp(-yaw_rate_error / 0.25)
 
             rewards = {
                 "track_lin_vel_xy_exp": lin_vel_error_mapped * self.cfg.lin_vel_reward_scale * self.step_dt,
+                "track_ang_vel_z_exp": yaw_rate_error_mapped * self.cfg.yaw_rate_reward_scale * self.step_dt,
             }
             curr_reward = torch.sum(torch.stack(list(rewards.values())), dim=0)
 
@@ -704,7 +638,7 @@ class HeterogeneousMultiAgent(DirectMARLEnv):
             object_default_state[:, 0:3] + self.scene.env_origins[env_ids]
         )
         self.object.write_root_state_to_sim(object_default_state, env_ids)
-        self.object.reset(env_ids)
+        # self.object.reset(env_ids)
 
         # Joint position command (deviation from default joint positions)
         for agent, action_space in self.cfg.action_spaces.items():
@@ -717,21 +651,21 @@ class HeterogeneousMultiAgent(DirectMARLEnv):
         # command[:, 1] = 0.0
         # command[:, 0] = 1.0
         self._commands[env_ids] = torch.zeros_like(self._commands[env_ids]).uniform_(-1.0, 1.0)
-        self._commands[env_ids, 2] = 0.0
+        self._commands[env_ids, 1].clip(0.5, 1)
 
         ### reset idx for h1 ###
         if env_ids is None or len(env_ids) == self.num_envs:
-            env_ids = self.robots["robot_2"]._ALL_INDICES
-        self.robots["robot_2"].reset(env_ids)
+            env_ids = self.robots["robot_1"]._ALL_INDICES
+        self.robots["robot_1"].reset(env_ids)
 
-        joint_pos = self.robots["robot_2"].data.default_joint_pos[env_ids]
-        joint_vel = self.robots["robot_2"].data.default_joint_vel[env_ids]
-        default_root_state = self.robots["robot_2"].data.default_root_state[env_ids]
+        joint_pos = self.robots["robot_1"].data.default_joint_pos[env_ids]
+        joint_vel = self.robots["robot_1"].data.default_joint_vel[env_ids]
+        default_root_state = self.robots["robot_1"].data.default_root_state[env_ids]
         default_root_state[:, :3] += self.scene.env_origins[env_ids]
 
-        self.robots["robot_2"].write_root_link_pose_to_sim(default_root_state[:, :7], env_ids)
-        self.robots["robot_2"].write_root_com_velocity_to_sim(default_root_state[:, 7:], env_ids)
-        self.robots["robot_2"].write_joint_state_to_sim(joint_pos, joint_vel, None, env_ids)
+        self.robots["robot_1"].write_root_link_pose_to_sim(default_root_state[:, :7], env_ids)
+        self.robots["robot_1"].write_root_com_velocity_to_sim(default_root_state[:, 7:], env_ids)
+        self.robots["robot_1"].write_joint_state_to_sim(joint_pos, joint_vel, None, env_ids)
 
         to_target = self.targets[env_ids] - default_root_state[:, :3]
         to_target[:, 2] = 0.0

@@ -17,6 +17,8 @@ parser.add_argument("--save_interval", type=int, default=None, help="How often t
 parser.add_argument("--log_interval", type=int, default=None, help="How often to log outputs")
 parser.add_argument("--exp_name", type=str, default="test", help="Name of the Experiment")
 parser.add_argument("--num_env_steps", type=int, default=None, help="RL Policy training iterations.")
+parser.add_argument("--dir", type=str, default=None, help="folder with trained models")
+
 parser.add_argument(
         "--algorithm",
         type=str,
@@ -90,6 +92,8 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     algo_args['train']['num_env_steps'] = args['num_env_steps']
     algo_args['train']['eval_interval'] = args['save_interval']
     algo_args['train']['log_interval'] = args['log_interval']
+    algo_args['train']['model_dir'] = args['dir']
+
 
     env_args = {}
     env_cfg.scene.num_envs = args['num_envs']
