@@ -151,7 +151,8 @@ class HeterogeneousPushMultiAgentFlatEnvCfg(DirectMARLEnvCfg):
             rigid_props=sim_utils.RigidBodyPropertiesCfg(),
             mass_props=sim_utils.MassPropertiesCfg(mass=50),
             collision_props=sim_utils.CollisionPropertiesCfg(),
-            visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(0.,1.,0.))
+            visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(0.,1.,0.)),
+            # visual_material=sim_utils.GlassMdlCfg(glass_color=(0.0, 1.0, 0.0), frosting_roughness=0.7),
         ),
         init_state=RigidObjectCfg.InitialStateCfg(pos=(0.0, 2, .6), rot=(1.0, 0.0, 0.0, 0.0)), #started the bar lower
     )
@@ -561,13 +562,12 @@ class HeterogeneousPushMultiAgent(DirectMARLEnv):
         # obj_vel[:, 2] = 0
 
         obj_vel = self.object.data.root_com_lin_vel_b
-
         obj_vel[:, 2] = 0
 
         marker_locations = torch.concat([
             bar_pos,
-            bar_pos+xy_commands,
-            bar_pos+obj_vel,
+            bar_pos+(xy_commands*2),
+            bar_pos+(obj_vel*2),
             bar_pos+offset1,
             bar_pos+offset2
         ], axis=0)
@@ -649,7 +649,7 @@ class HeterogeneousPushMultiAgent(DirectMARLEnv):
         # command[:, 1] = 0.0
         # command[:, 0] = 1.0
         self._commands[env_ids] = torch.zeros_like(self._commands[env_ids]).uniform_(-1.0, 1.0)
-        self._commands[env_ids, 1].clip(0.5, 1)
+        self._commands[env_ids, 0] = torch.zeros_like(self._commands[env_ids, 0]).uniform_(0.5, 1.0)
 
         ### reset idx for h1 ###
         if env_ids is None or len(env_ids) == self.num_envs:
