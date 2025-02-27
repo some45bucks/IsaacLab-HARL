@@ -109,8 +109,25 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
         move_vector = torch.clip(move_vector, -1, 1)
 
     def set_to_no_move(key):
+        nonlocal move_command
+        nonlocal movements
         nonlocal move_vector
-        move_vector = torch.tensor([0,0,0])
+
+        if key == Key.up:
+            move_vector -= movements['move_forward']
+        elif key == Key.left:
+            move_vector -= movements['move_left']
+        elif key == Key.right:
+            move_vector -= movements['move_right']
+        elif key == Key.down:
+            move_vector -= movements['move_backward']
+        elif hasattr(key, 'char'):
+            if key.char == 'a':
+                move_vector -= movements['rotate_left']
+            elif key.char == 'd':
+                move_vector -= movements['rotate_right']
+
+        move_vector = torch.clip(move_vector, -1, 1)
     
     listener = Listener(on_press=parse_input, on_release=set_to_no_move)
     listener_thread = threading.Thread(target=listener.start, daemon=True)
