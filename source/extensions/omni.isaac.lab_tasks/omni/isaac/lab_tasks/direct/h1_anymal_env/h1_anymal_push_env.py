@@ -564,12 +564,14 @@ class HeterogeneousPushMultiAgent(DirectMARLEnv):
         obj_vel = self.object.data.root_com_lin_vel_b
         obj_vel[:, 2] = 0
 
+        offset = torch.tensor([0,2,0], device=self.device)
+
         marker_locations = torch.concat([
-            bar_pos,
-            bar_pos+(xy_commands*2),
-            bar_pos+(obj_vel*2),
-            bar_pos+offset1,
-            bar_pos+offset2
+            bar_pos+offset,
+            bar_pos+xy_commands+offset,
+            bar_pos+obj_vel+offset,
+            bar_pos+offset1+offset,
+            bar_pos+offset2+offset
         ], axis=0)
 
         self.my_visualizer.visualize(marker_locations, marker_orientations,scales=marker_scales ,marker_indices=marker_ids)
@@ -614,13 +616,26 @@ class HeterogeneousPushMultiAgent(DirectMARLEnv):
     #     return torch.any(torch.cat(all_dones), dim=0), torch.any(torch.cat(all_died), dim=0)
 
     #TODO: Implement a dones function that handles multiple robots 
+
+    def _get_too_far_away(self):
+        anymal_pos = self.robots["robot_0"].data.body_com_pos_w[:,0,:]
+        h1_pos = self.robots["robot_1"].data.body_com_pos_w[:,0,:]
+
+        box_pos = self.object.data.body_com_pos_w[:,0,:]
+
+        anymal_too_far = torch.sqrt(torch.square(anymal_pos[:,0] - box_pos[:,0]) + torch.square(anymal_pos[:,1] - box_pos[:,1])) > 3
+        h1_too_far = torch.sqrt(torch.square(h1_pos[:,0] - box_pos[:,0]) + torch.square(h1_pos[:,1] - box_pos[:,1])) > 3
+
+        return torch.logical_or(anymal_too_far, h1_too_far)
+
     def _get_dones(self) -> tuple[dict, dict]:
         self._compute_intermediate_values()
         time_out = self.episode_length_buf >= self.max_episode_length - 1
         h1_died = self.torso_position[:, 2] < self.cfg.termination_height
         anymal_fallen = self._get_anymal_fallen()
-
+        too_far = self._get_too_far_away()
         dones = torch.logical_or(h1_died, anymal_fallen)
+        dones = torch.logical_or(dones, too_far)
         
         # dones = anymal_fallen
 
