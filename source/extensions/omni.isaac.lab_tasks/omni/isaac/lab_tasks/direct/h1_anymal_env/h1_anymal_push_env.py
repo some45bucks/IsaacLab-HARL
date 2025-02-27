@@ -591,7 +591,7 @@ class HeterogeneousPushMultiAgent(DirectMARLEnv):
             
             # angular velocity tracking
             yaw_rate_error = torch.square(self._commands[:, 2] - self.object.data.root_com_ang_vel_b[:, 2])
-            yaw_rate_error_mapped = torch.exp(-yaw_rate_error / 0.25)
+            yaw_rate_error_mapped = torch.exp(-yaw_rate_error)
 
             rewards = {
                 "track_lin_vel_xy_exp": lin_vel_error_mapped * self.cfg.lin_vel_reward_scale * self.step_dt,
