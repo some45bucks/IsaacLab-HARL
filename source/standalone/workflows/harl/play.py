@@ -85,26 +85,32 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
         move_backward=torch.tensor([-1,0,0]),
         stay_still=torch.tensor([0,0,0])
     )
+    move_vector = movements[move_command]
 
     def parse_input(key):
         nonlocal move_command
+        nonlocal movements
+        nonlocal move_vector
+
         if key == Key.up:
-            move_command = 'move_forward'
+            move_vector += movements['move_forward']
         elif key == Key.left:
-            move_command = 'move_left'
+            move_vector += movements['move_left']
         elif key == Key.right:
-            move_command = 'move_right'
+            move_vector += movements['move_right']
         elif key == Key.down:
-            move_command = 'move_backward'
-        elif hasattr(key, 'char'):  # Ensure `key` has `.char`
+            move_vector += movements['move_backward']
+        elif hasattr(key, 'char'):
             if key.char == 'a':
-                move_command = 'rotate_left'
+                move_vector += movements['rotate_left']
             elif key.char == 'd':
-                move_command = 'rotate_right'
+                move_vector += movements['rotate_right']
+
+        move_vector = torch.clip(move_vector, -1, 1)
 
     def set_to_no_move(key):
-        nonlocal move_command
-        move_command = 'stay_still'
+        nonlocal move_vector
+        move_vector = torch.tensor([0,0,0])
     
     listener = Listener(on_press=parse_input, on_release=set_to_no_move)
     listener_thread = threading.Thread(target=listener.start, daemon=True)
@@ -168,9 +174,7 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
                 actions[:, agent_id, :action_space] = action.cpu().numpy()
                 rnn_states[:, agent_id, :] = rnn_state.cpu().numpy()
 
-            control_vector = movements[move_command]
-            runner.env.unwrapped._commands[:,:] = control_vector
-
+            runner.env.unwrapped._commands[:,:] = move_vector
 
             obs, _, rewards, dones, _, _ = runner.env.step(actions)
 
