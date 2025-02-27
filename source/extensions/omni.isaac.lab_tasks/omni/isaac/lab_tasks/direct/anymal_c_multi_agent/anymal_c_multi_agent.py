@@ -280,8 +280,8 @@ class AnymalCMultiAgent(DirectMARLEnv):
         super().__init__(cfg, render_mode, **kwargs)
         # Joint position command (deviation from default joint positions)
 
-        self.actions = {agent : torch.zeros(self.num_envs, action_space, device=self.device, dtype=torch.float64) for agent, action_space in self.cfg.action_spaces.items()}
-        self.previous_actions = {agent : torch.zeros(self.num_envs, action_space, device=self.device, dtype=torch.float64) for agent, action_space in self.cfg.action_spaces.items()}
+        self.actions = {agent : torch.zeros(self.num_envs, action_space, device=self.device) for agent, action_space in self.cfg.action_spaces.items()}
+        self.previous_actions = {agent : torch.zeros(self.num_envs, action_space, device=self.device) for agent, action_space in self.cfg.action_spaces.items()}
         # X/Y linear velocity and yaw angular velocity commands
         # self._commands = {agent : torch.zeros(self.num_envs, 3, device=self.device) for agent in self.cfg.possible_agents}
         self._commands = torch.zeros(self.num_envs, 3, device=self.device)
@@ -587,8 +587,8 @@ class AnymalCMultiAgent(DirectMARLEnv):
 
         # Joint position command (deviation from default joint positions)
         for agent, action_space in self.cfg.action_spaces.items():
-            self.actions[agent][env_ids] = torch.zeros(env_ids.shape[0], action_space, device=self.device, dtype=torch.float64)
-            self.previous_actions[agent][env_ids] = torch.zeros(env_ids.shape[0], action_space, device=self.device, dtype=torch.float64)
+            self.actions[agent][env_ids] = torch.zeros(env_ids.shape[0], action_space, device=self.device)
+            self.previous_actions[agent][env_ids] = torch.zeros(env_ids.shape[0], action_space, device=self.device)
 
 
         # self.actions = {agent : torch.zeros(self.num_envs, action_space, device=self.device) for agent, action_space in self.cfg.action_spaces.items()}
