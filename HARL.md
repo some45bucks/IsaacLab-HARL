@@ -1,9 +1,3 @@
-# Training pitfalls to avoid
-
-- Make sure that when you train a velocity control policy that the orientation is how you expect it to be
-- Make sure that when you reset the index in the environment only reset the environment ids that need to be reset
-NOT all the environments 
-
 # For Heterogeneous Agent Reinforcement Learning
 
 Use these instructions to install isaac sim -> [here](https://docs.omniverse.nvidia.com/isaacsim/latest/installation/install_python.html#install-isaac-sim-using-pip)
@@ -12,25 +6,25 @@ Use these instructions to install isaac sim -> [here](https://docs.omniverse.nvi
 ```bash
 cd IsaacLab
 ./isaaclab.sh -i
-```
-
-Then install the following version of gymnasium, make sure to do all this with  your isaaclab conda env activated.
-
-# Install the HARL lib from source: 
-HARL can be found ->[here](https://github.com/some45bucks/HARL.git)
-
-```bash
-git clone https://github.com/some45bucks/HARL.git
-cd HARL
-pip install -e .
 pip install gymnasium==0.29.0
 ```
 
-Then an example script for running the mult agent bar environment
+At this point you should be able to run the trained multi-agent homogeneous environment.
 
 ```bash
-python train.py --task Isaac-Multi-Agent-Flat-Anymal-C-Direct-v0 --video_interval 10_000 --num_envs 2048 --save_interval 10 --log_interval 10 --algorithm happo --headless --num_env_steps 2_000_000_000
+cd IsaacLab
+python source/standalone/workflows/harl/play.py --task Isaac-Multi-Agent-Flat-Anymal-C-Direct-v0 --num_envs 1 --algorithm happo --dir source/extensions/omni.isaac.lab_tasks/omni/isaac/lab_tasks/direct/anymal_c_multi_agent/best_model
 ```
+
+# Training custom environment
+
+
+```bash
+python source/standalone/workflows/harl/play.py  --task Isaac-Multi-Agent-Flat-Anymal-C-Direct-v0 --video_interval 10_000 --num_envs 2048 --save_interval 10 --log_interval 10 --algorithm happo --headless --num_env_steps 2_000_000_000
+```
+
+You can run `python play.py -h` to see all arguments. Also note that the configuration for the algorithms can be found in their yaml files, an
+example of which can be found at `source/extensions/omni.isaac.lab_tasks/omni/isaac/lab_tasks/direct/anymal_c_multi_agent/agents/harl_ppo_cfg.yaml`
 
 # Registering a New Environment in Isaac Lab
 
