@@ -143,17 +143,39 @@ class HeterogeneousMultiAgentFlatEnvCfg(DirectMARLEnvCfg):
     robot_1.init_state.rot = (1.0, 0.0, 0.0, 1)
     robot_1.init_state.pos = (1.0, 0.0, 1.0)
 
-    # rec prism
-    cfg_rec_prism= RigidObjectCfg(
-        prim_path="/World/envs/env_.*/Object",
-        spawn=sim_utils.CuboidCfg( 
-            size=(2,1,2),
-            rigid_props=sim_utils.RigidBodyPropertiesCfg(),
-            mass_props=sim_utils.MassPropertiesCfg(mass=.5), # changed from 1.0 to 0.5
-            collision_props=sim_utils.CollisionPropertiesCfg(),
-            visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(0.0, 1.0, 0.0))
+    # # rec prism
+    # cfg_rec_prism= RigidObjectCfg(
+    #     prim_path="/World/envs/env_.*/Object",
+    #     spawn=sim_utils.CuboidCfg( 
+    #         size=(2,1,2),
+    #         rigid_props=sim_utils.RigidBodyPropertiesCfg(),
+    #         mass_props=sim_utils.MassPropertiesCfg(mass=.5), # changed from 1.0 to 0.5
+    #         collision_props=sim_utils.CollisionPropertiesCfg(),
+    #         visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(0.0, 1.0, 0.0))
+    #     ),
+    #     init_state=RigidObjectCfg.InitialStateCfg(pos=(0.0, 3, 2), rot=(1.0, 0.0, 0.0, 0.0)), #started the bar lower
+    # )
+    cfg_rec_prism: RigidObjectCfg = RigidObjectCfg(
+        prim_path="/World/envs/env_.*/object",
+        spawn=sim_utils.UsdFileCfg(
+            # usd_path=f"assets/GrandPiano_instanceable_meshes.usd",
+            usd_path=f"assets/GrandPiano_instanceable_meshes.usda",
+            rigid_props=sim_utils.RigidBodyPropertiesCfg(
+                kinematic_enabled=False,
+                disable_gravity=False,
+                enable_gyroscopic_forces=True,
+                solver_position_iteration_count=8,
+                solver_velocity_iteration_count=0,
+                sleep_threshold=0.005,
+                stabilization_threshold=0.0025,
+                max_depenetration_velocity=1000.0,
+            ),
+            mass_props=sim_utils.MassPropertiesCfg(density=400.0),
+            scale=(1, 1, 1),            
+            # scale=(.01, .01, .01),
+
         ),
-        init_state=RigidObjectCfg.InitialStateCfg(pos=(0.0, 3, 2), rot=(1.0, 0.0, 0.0, 0.0)), #started the bar lower
+        init_state=RigidObjectCfg.InitialStateCfg(pos=(0.0, 2, 0.1), rot=(1.0, 0.0, 0.0, 0.0)),
     )
 
     # reward scales (override from flat config)
@@ -430,7 +452,7 @@ class HeterogeneousMultiAgent(DirectMARLEnv):
 
         robot_id = "robot_0"
         robot = self.robots[robot_id]
-        anymal_commands = torch.stack([self._commands[:,1], self._commands[:,0], self._commands[:,2]]).t()
+        anymal_commands = torch.stack([self._commands[:,1], -self._commands[:,0], self._commands[:,2]]).t()
         obs[robot_id] = (torch.cat(
         [
             tensor
@@ -542,6 +564,7 @@ class HeterogeneousMultiAgent(DirectMARLEnv):
         # command[:, 0] = 1.0
         self._commands = torch.zeros(self.num_envs, 3, device=self.device)
         self._commands[:, 1] = 0.5
+        self._commands[:, 0] = 0.5
 
         ### reset idx for h1 ###
         if env_ids is None or len(env_ids) == self.num_envs:
