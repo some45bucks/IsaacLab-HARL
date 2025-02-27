@@ -10,6 +10,7 @@ import torch
 
 import omni.isaac.lab.envs.mdp as mdp
 import omni.isaac.lab.sim as sim_utils
+from omni.isaac.lab.markers import VisualizationMarkers, VisualizationMarkersCfg
 from omni.isaac.lab.assets import Articulation, ArticulationCfg, AssetBase, AssetBaseCfg, RigidObject, RigidObjectCfg
 from omni.isaac.lab.envs import DirectRLEnv, DirectRLEnvCfg, DirectMARLEnv, DirectMARLEnvCfg
 from omni.isaac.lab.managers import EventTermCfg as EventTerm
@@ -23,6 +24,7 @@ from omni.isaac.lab.utils.assets import ISAAC_NUCLEUS_DIR
 import copy
 from omni.isaac.core.utils.torch.rotations import compute_heading_and_up, compute_rot, quat_conjugate
 import omni.isaac.core.utils.torch as torch_utils
+from omni.isaac.lab.utils.math import quat_from_angle_axis
 ##
 # Pre-defined configs
 ##
@@ -177,7 +179,7 @@ class HeterogeneousMultiAgentFlatEnvCfg(DirectMARLEnvCfg):
         spawn=sim_utils.CuboidCfg( 
             size=(3,2,.15),
             rigid_props=sim_utils.RigidBodyPropertiesCfg(),
-            mass_props=sim_utils.MassPropertiesCfg(mass=.5),
+            mass_props=sim_utils.MassPropertiesCfg(mass=.2),
             collision_props=sim_utils.CollisionPropertiesCfg(),
             visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(1,.65,0))
         ),
@@ -204,6 +206,7 @@ class HeterogeneousMultiAgentFlatEnvCfg(DirectMARLEnvCfg):
     h1_action_scale = 1.0
     termination_height: float = 0.8
     anymal_min_z_pos = 0.3
+    h1_min_z_pos = 1.0
 
 
     joint_gears: list = [
@@ -284,6 +287,31 @@ class HeterogeneousMultiAgentRoughEnvCfg(HeterogeneousMultiAgentFlatEnvCfg):
     # reward scales (override from flat config)
     flat_orientation_reward_scale = 0.0
 
+def define_markers() -> VisualizationMarkers:
+    marker_cfg = VisualizationMarkersCfg(
+        prim_path="/Visuals/myMarkers",
+        markers={
+            "sphere1": sim_utils.SphereCfg(
+                radius=0.15,
+                visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(.8, 0.0, 0.0)),
+            ),
+            "sphere2": sim_utils.SphereCfg(
+                radius=0.15,
+                visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(0.0, 1.0, 1.0)),
+            ),
+            "arrow1": sim_utils.UsdFileCfg(
+                usd_path=f"{ISAAC_NUCLEUS_DIR}/Props/UIElements/arrow_x.usd",
+                scale=(.1, .1, 1.0),
+                visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(.8, 0.0, 0.0)),
+            ),
+            "arrow2": sim_utils.UsdFileCfg(
+                usd_path=f"{ISAAC_NUCLEUS_DIR}/Props/UIElements/arrow_x.usd",
+                scale=(.1, .1, 1.0),
+                visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(0.0, 1.0, 1.0)),
+            ),
+        },
+    )
+    return VisualizationMarkers(marker_cfg)
 
 class HeterogeneousMultiAgent(DirectMARLEnv):
     cfg: HeterogeneousMultiAgentFlatEnvCfg | HeterogeneousMultiAgentRoughEnvCfg
@@ -352,6 +380,7 @@ class HeterogeneousMultiAgent(DirectMARLEnv):
         self.robots = {}
         self.contact_sensors = {}
         self.height_scanners = {}
+        self.my_visualizer = define_markers()
         self.object = RigidObject(self.cfg.cfg_rec_prism)
         
         self.scene.rigid_objects["object"] = self.object
@@ -402,10 +431,17 @@ class HeterogeneousMultiAgent(DirectMARLEnv):
 
     def _get_anymal_fallen(self):
         agent_dones = []
+        robot = self.robots["robot_0"]
+        died = robot.data.body_com_pos_w[:,0,2].view(-1) < self.cfg.anymal_min_z_pos
+        agent_dones.append(died)
 
-        for _, robot in self.robots.items():
-            died = robot.data.body_com_pos_w[:,0,2].view(-1) < self.cfg.anymal_min_z_pos
-            agent_dones.append(died)
+        robot = self.robots["robot_1"]
+        died = robot.data.body_com_pos_w[:,0,2].view(-1) < self.cfg.anymal_min_z_pos
+        agent_dones.append(died)
+
+        robot = self.robots["robot_2"]
+        died = robot.data.body_com_pos_w[:,0,2].view(-1) < self.cfg.h1_min_z_pos
+        agent_dones.append(died)
 
         return torch.any(torch.stack(agent_dones), dim=0)
     
@@ -475,7 +511,7 @@ class HeterogeneousMultiAgent(DirectMARLEnv):
 
         robot_id = "robot_0"
         robot = self.robots[robot_id]
-        anymal_commands = torch.stack([self._commands[:,1], -self._commands[:,0], self._commands[:,2]]).t()
+        anymal_commands = torch.zeros_like(self._commands)
         obs[robot_id] = (torch.cat(
         [
             tensor
@@ -496,7 +532,6 @@ class HeterogeneousMultiAgent(DirectMARLEnv):
 
         robot_id = "robot_1"
         robot = self.robots[robot_id]
-        anymal_commands = torch.stack([self._commands[:,1], -self._commands[:,0], self._commands[:,2]]).t()
         obs[robot_id] = (torch.cat(
         [
             tensor
@@ -543,12 +578,69 @@ class HeterogeneousMultiAgent(DirectMARLEnv):
         y_euler_angle = torch.arcsin(2 * (w * y - z * x))
         return y_euler_angle
     
+    def _draw_markers(self, command):
+        xy_commands = command.clone()
+        z_commands = xy_commands[:,2].clone()
+        xy_commands[:,2] = 0
+
+        marker_ids = torch.concat([
+            0*torch.zeros(2*self._commands.shape[0]),
+            1*torch.ones(self._commands.shape[0]),
+            2*torch.ones(self._commands.shape[0]),
+            3*torch.ones(self._commands.shape[0])
+        ], axis=0)
+
+        bar_pos = self.object.data.body_com_pos_w.squeeze(1).clone()
+        bar_yaw = self.object.data.root_com_ang_vel_b[:, 2].clone()
+
+        scale1 = torch.ones((self._commands.shape[0],3), device=self.device)
+        scale1[:,0] = torch.abs(z_commands)
+
+        scale2 = torch.ones((self._commands.shape[0],3), device=self.device)
+        scale2[:,0] = torch.abs(bar_yaw)
+
+        offset1 = torch.zeros((self._commands.shape[0],3), device=self.device)
+        offset1[:, 1] = 0
+
+        offset2 = torch.zeros((self._commands.shape[0],3), device=self.device)
+        offset2[:, 1] = 0
+
+        _90 = (-3.14/2)*torch.ones(self._commands.shape[0]).to(self.device)
+        
+        marker_orientations = quat_from_angle_axis(torch.concat([
+            torch.zeros(3*self._commands.shape[0]).to(self.device),
+            torch.sign(z_commands)*_90,
+            torch.sign(bar_yaw)*_90
+        ], axis=0), torch.tensor([0.0, 1.0, 0.0],device=self.device))
+
+        marker_scales = torch.concat([
+            torch.ones((3*self._commands.shape[0],3), device=self.device),
+            scale1,
+            scale2
+        ], axis=0)
+
+        obj_vel = self.object.data.root_com_lin_vel_b.clone()
+        obj_vel[:, 2] = 0
+
+        marker_locations = torch.concat([
+            bar_pos,
+            bar_pos+xy_commands,
+            bar_pos+obj_vel,
+            bar_pos+offset1,
+            bar_pos+offset2
+        ], axis=0)
+
+        self.my_visualizer.visualize(marker_locations, marker_orientations,scales=marker_scales ,marker_indices=marker_ids)
+
     def _get_rewards(self) -> dict:
         reward = {}
 
+        bar_commands = torch.stack([-self._commands[:,1], self._commands[:,0], self._commands[:,2]]).t()
+        self._draw_markers(bar_commands)
+
         for robot_id, _ in self.robots.items():
             # linear velocity tracking
-            lin_vel_error = torch.sum(torch.square(self._commands[:, :2] - self.object.data.root_com_lin_vel_b[:, :2]), dim=1) #changing this to the bar
+            lin_vel_error = torch.sum(torch.square(bar_commands[:, :2] - self.object.data.root_com_lin_vel_b[:, :2]), dim=1) #changing this to the bar
             lin_vel_error_mapped = torch.exp(-lin_vel_error) 
 
             rewards = {
@@ -580,6 +672,7 @@ class HeterogeneousMultiAgent(DirectMARLEnv):
         anymal_fallen = self._get_anymal_fallen()
 
         dones = torch.logical_or(h1_died, anymal_fallen)
+        
         # dones = anymal_fallen
 
         # return {key:torch.zeros_like(time_out) for key in self.robots.keys()}, {key:torch.zeros_like(dones) for key in self.robots.keys()}
@@ -597,17 +690,17 @@ class HeterogeneousMultiAgent(DirectMARLEnv):
         self.object.reset(env_ids)
 
         # Joint position command (deviation from default joint positions)
-        self.actions = {agent : torch.zeros(self.num_envs, action_space, device=self.device) for agent, action_space in self.cfg.action_spaces.items()}
-        self.previous_actions = {agent : torch.zeros(self.num_envs, action_space, device=self.device) for agent, action_space in self.cfg.action_spaces.items()}
+        for agent, action_space in self.cfg.action_spaces.items():
+            self.actions[agent][env_ids] = torch.zeros(env_ids.shape[0], action_space, device=self.device)
+            self.previous_actions[agent][env_ids] = torch.zeros(env_ids.shape[0], action_space, device=self.device)
 
         # X/Y linear velocity and yaw angular velocity commands
         # command = torch.zeros(self.num_envs, 3, device=self.device).uniform_(-1.0, 1.0)
         # command[:, 2] = 0.0
         # command[:, 1] = 0.0
         # command[:, 0] = 1.0
-        self._commands = torch.zeros(self.num_envs, 3, device=self.device)
-        self._commands[:, 1] = 0.5
-        self._commands[:, 0] = 0.5
+        self._commands[env_ids] = torch.zeros_like(self._commands[env_ids]).uniform_(-1.0, 1.0)
+        self._commands[env_ids, 2] = 0.0
 
         ### reset idx for h1 ###
         if env_ids is None or len(env_ids) == self.num_envs:
