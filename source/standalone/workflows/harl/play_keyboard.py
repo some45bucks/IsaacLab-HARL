@@ -7,6 +7,8 @@ import numpy as np
 import tensorboardX
 import torch
 from omni.isaac.lab.app import AppLauncher
+from pynput.keyboard import Key, Listener
+import threading
 
 
 parser = argparse.ArgumentParser(description="Train an RL agent with HARL.")
@@ -72,6 +74,65 @@ agent_cfg_entry_point = "harl_ppo_cfg_entry_point"
 
 @hydra_task_config(args_cli.task, agent_cfg_entry_point)
 def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agent_cfg: dict):
+    move_command = 'stay_still'
+
+    movements=dict(
+        rotate_left=torch.tensor([0,0,1]),
+        rotate_right=torch.tensor([0,0,-1]),
+        move_left=torch.tensor([0,1,0]),
+        move_right=torch.tensor([0,-1,0]),
+        move_forward=torch.tensor([1,0,0]),
+        move_backward=torch.tensor([-1,0,0]),
+        stay_still=torch.tensor([0,0,0])
+    )
+    move_vector = movements[move_command]
+
+    def parse_input(key):
+        nonlocal move_command
+        nonlocal movements
+        nonlocal move_vector
+
+        if key == Key.up:
+            move_vector += movements['move_forward']
+        elif key == Key.left:
+            move_vector += movements['move_left']
+        elif key == Key.right:
+            move_vector += movements['move_right']
+        elif key == Key.down:
+            move_vector += movements['move_backward']
+        elif hasattr(key, 'char'):
+            if key.char == 'a':
+                move_vector += movements['rotate_left']
+            elif key.char == 'd':
+                move_vector += movements['rotate_right']
+
+        move_vector = torch.clip(move_vector, -1, 1)
+
+    def set_to_no_move(key):
+        nonlocal move_command
+        nonlocal movements
+        nonlocal move_vector
+
+        if key == Key.up:
+            move_vector -= movements['move_forward']
+        elif key == Key.left:
+            move_vector -= movements['move_left']
+        elif key == Key.right:
+            move_vector -= movements['move_right']
+        elif key == Key.down:
+            move_vector -= movements['move_backward']
+        elif hasattr(key, 'char'):
+            if key.char == 'a':
+                move_vector -= movements['rotate_left']
+            elif key.char == 'd':
+                move_vector -= movements['rotate_right']
+
+        move_vector = torch.clip(move_vector, -1, 1)
+    
+    listener = Listener(on_press=parse_input, on_release=set_to_no_move)
+    listener_thread = threading.Thread(target=listener.start, daemon=True)
+    listener_thread.start()
+
     args = args_cli.__dict__
 
     args['env'] = 'isaaclab'
@@ -130,10 +191,11 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
                 actions[:, agent_id, :action_space] = action.cpu().numpy()
                 rnn_states[:, agent_id, :] = rnn_state.cpu().numpy()
 
+            runner.env.unwrapped._commands[:,:] = move_vector
+
             obs, _, rewards, dones, _, _ = runner.env.step(actions)
 
             total_rewards += rewards
-            print(f"Commands : {runner.env.unwrapped._commands[:,:]}")
             print(f"Average reward: {rewards.mean(axis=0)}")
             dones_env = np.all(dones, axis=1)
             masks = np.ones((args['num_envs'], runner.num_agents, 1),dtype=np.float64,)
