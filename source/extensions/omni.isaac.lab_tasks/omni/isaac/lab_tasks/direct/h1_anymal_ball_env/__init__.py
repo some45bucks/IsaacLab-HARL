@@ -17,7 +17,7 @@ from .h1_anymal_ball_env import HeterogeneousMultiAgent, HeterogeneousMultiAgent
 ##
 
 gym.register(
-    id="Isaac-Anymal-H1-Piano-Direct-v0",
+    id="Isaac-Anymal-H1-Ball-Direct-v0",
     entry_point="omni.isaac.lab_tasks.direct.h1_anymal_piano_env:HeterogeneousMultiAgent",
     disable_env_checker=True,
     kwargs={
