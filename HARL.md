@@ -20,7 +20,7 @@ python source/standalone/workflows/harl/play.py --task Isaac-Multi-Agent-Flat-An
 
 
 ```bash
-python source/standalone/workflows/harl/play.py  --task Isaac-Multi-Agent-Flat-Anymal-C-Direct-v0 --video_interval 10_000 --num_envs 2048 --save_interval 10 --log_interval 10 --algorithm happo --headless --num_env_steps 2_000_000_000
+python source/standalone/workflows/harl/train.py  --task Isaac-Multi-Agent-Flat-Anymal-C-Direct-v0 --video_interval 10_000 --num_envs 2048 --save_interval 10 --log_interval 10 --algorithm happo --headless --num_env_steps 2_000_000_000
 ```
 
 You can run `python play.py -h` to see all arguments. Also note that the configuration for the algorithms can be found in their yaml files, an

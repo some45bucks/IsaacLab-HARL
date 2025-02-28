@@ -207,14 +207,14 @@ class AnymalCMultiAgentFlatEnvCfg(DirectMARLEnvCfg):
     # reward scales
     lin_vel_reward_scale = 5.0
     yaw_rate_reward_scale = 2.0
-    z_vel_reward_scale = -2.0
-    ang_vel_reward_scale = -0.05
-    joint_torque_reward_scale = -2.5e-5
-    joint_accel_reward_scale = -2.5e-7
-    action_rate_reward_scale = -0.01
+    z_vel_reward_scale = 2.0
+    ang_vel_reward_scale = 0.05
+    joint_torque_reward_scale = 2.5e-5
+    joint_accel_reward_scale = 2.5e-7
+    action_rate_reward_scale = 0.01
     feet_air_time_reward_scale = 0.5
-    undersired_contact_reward_scale = -1.0
-    flat_orientation_reward_scale = -1.0
+    undersired_contact_reward_scale = 1.0
+    flat_orientation_reward_scale = 1.0
     flat_bar_roll_angle_reward_scale = 1.0
 
     bar_z_min_pos = 0.4
@@ -476,14 +476,19 @@ class AnymalCMultiAgent(DirectMARLEnv):
             yaw_rate_error_mapped = torch.exp(-yaw_rate_error)
             # z velocity tracking
             z_vel_error = torch.square(robot.data.root_com_lin_vel_b[:, 2])
+            z_vel_error_mapped = torch.exp(-z_vel_error)
             # angular velocity x/y
             ang_vel_error = torch.sum(torch.square(robot.data.root_com_ang_vel_b[:, :2]), dim=1)
+            ang_vel_error_mapped = torch.exp(-ang_vel_error)
             # joint torques
             joint_torques = torch.sum(torch.square(robot.data.applied_torque), dim=1)
+            joint_torques_mapped = torch.exp(-joint_torques)
             # joint acceleration
             joint_accel = torch.sum(torch.square(robot.data.joint_acc), dim=1)
+            joint_accel_mapped = torch.exp(-joint_accel)
             # action rate            
             action_rate = torch.sum(torch.square(self.actions[robot_id] - self.previous_actions[robot_id]).view(1,-1), dim=1)
+            action_rate_mapped = torch.exp(-action_rate)
 
             bar_roll_angle = torch.abs(self.get_y_euler_from_quat(self.object.data.root_com_quat_w))
             bar_roll_angle_mapped = torch.exp(-bar_roll_angle)
@@ -494,25 +499,29 @@ class AnymalCMultiAgent(DirectMARLEnv):
             air_time = torch.sum((last_air_time - 0.5) * first_contact, dim=1) * (
                 torch.norm(self._commands[:, :2], dim=1) > 0.1
             )
+            air_time_mapped = torch.exp(-air_time)
             # undersired contacts
             net_contact_forces = self.contact_sensors[robot_id].data.net_forces_w_history
             is_contact = (
                 torch.max(torch.norm(net_contact_forces[:, :, self.undesired_body_contact_ids[robot_id]], dim=-1), dim=1)[0] > 1.0
             )
             contacts = torch.sum(is_contact, dim=1)
+            contacts_mapped = torch.exp(-contacts)
             # flat orientation
             flat_orientation = torch.sum(torch.square(robot.data.projected_gravity_b[:, :2]), dim=1)
+            flat_orientation_mapped = torch.exp(-flat_orientation)
+
             rewards = {
                 "track_lin_vel_xy_exp": lin_vel_error_mapped * self.cfg.lin_vel_reward_scale * self.step_dt,
                 "track_ang_vel_z_exp": yaw_rate_error_mapped * self.cfg.yaw_rate_reward_scale * self.step_dt,
-                # "lin_vel_z_l2": z_vel_error * self.cfg.z_vel_reward_scale * self.step_dt,
-                # "ang_vel_xy_l2": ang_vel_error * self.cfg.ang_vel_reward_scale * self.step_dt,
-                # "dof_torques_l2": joint_torques * self.cfg.joint_torque_reward_scale * self.step_dt,
-                # "dof_acc_l2": joint_accel * self.cfg.joint_accel_reward_scale * self.step_dt,
-                # "action_rate_l2": (action_rate * self.cfg.action_rate_reward_scale * self.step_dt).repeat(self.num_envs),
-                # "feet_air_time": air_time * self.cfg.feet_air_time_reward_scale * self.step_dt,
-                # "undesired_contacts": contacts * self.cfg.undersired_contact_reward_scale * self.step_dt,
-                # "flat_orientation_l2": flat_orientation * self.cfg.flat_orientation_reward_scale * self.step_dt,
+                # "lin_vel_z_l2": z_vel_error_mapped * self.cfg.z_vel_reward_scale * self.step_dt,
+                # "ang_vel_xy_l2": ang_vel_error_mapped * self.cfg.ang_vel_reward_scale * self.step_dt,
+                # "dof_torques_l2": joint_torques_mapped * self.cfg.joint_torque_reward_scale * self.step_dt,
+                # "dof_acc_l2": joint_accel_mapped * self.cfg.joint_accel_reward_scale * self.step_dt,
+                # "action_rate_l2": (action_rate_mapped * self.cfg.action_rate_reward_scale * self.step_dt).repeat(self.num_envs),
+                # "feet_air_time": air_time_mapped * self.cfg.feet_air_time_reward_scale * self.step_dt,
+                # "undesired_contacts": contacts_mapped * self.cfg.undersired_contact_reward_scale * self.step_dt,
+                # "flat_orientation_l2": flat_orientation_mapped * self.cfg.flat_orientation_reward_scale * self.step_dt,
                 # "flat_bar_roll_angle" : bar_roll_angle_mapped * self.cfg.flat_bar_roll_angle_reward_scale * self.step_dt,
                 # "bar_fallen_reward" : bar_fallen_reward,
                 # "anymal_fallen_reward" : anymal_fallen_reward,
