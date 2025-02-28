@@ -12,7 +12,7 @@ parser.add_argument("--video_length", type=int, default=500, help="Length of the
 parser.add_argument("--video_interval", type=int, default=20000, help="Interval between video recordings (in steps).")
 parser.add_argument("--num_envs", type=int, default=None, help="Number of environments to simulate.")
 parser.add_argument("--task", type=str, default=None, help="Name of the task.")
-parser.add_argument("--seed", type=int, default=None, help="Seed used for the environment")
+parser.add_argument("--seed", type=int, default=1, help="Seed used for the environment")
 parser.add_argument("--save_interval", type=int, default=None, help="How often to save the model")
 parser.add_argument("--log_interval", type=int, default=None, help="How often to log outputs")
 parser.add_argument("--exp_name", type=str, default="test", help="Name of the Experiment")
@@ -93,6 +93,8 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     algo_args['train']['eval_interval'] = args['save_interval']
     algo_args['train']['log_interval'] = args['log_interval']
     algo_args['train']['model_dir'] = args['dir']
+    algo_args['seed']['specify_seed'] = True
+    algo_args['seed']['seed'] = args['seed']
 
 
     env_args = {}
