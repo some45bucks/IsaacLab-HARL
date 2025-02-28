@@ -205,7 +205,7 @@ class AnymalCMultiAgentFlatEnvCfg(DirectMARLEnvCfg):
     flat_orientation_reward_scale = 0.0
 
     # reward scales
-    lin_vel_reward_scale = 5.0
+    lin_vel_reward_scale = 5
     yaw_rate_reward_scale = 2.0
     z_vel_reward_scale = 2.0
     ang_vel_reward_scale = 0.05
@@ -465,7 +465,7 @@ class AnymalCMultiAgent(DirectMARLEnv):
         bar_commands = torch.stack([-self._commands[:,1], self._commands[:,0], self._commands[:,2]]).t()
 
         self._draw_markers(bar_commands)
-
+        total_reward = 0
         for robot_id, robot in self.robots.items():
             # linear velocity tracking
             
@@ -530,7 +530,10 @@ class AnymalCMultiAgent(DirectMARLEnv):
             }
             curr_reward = torch.sum(torch.stack(list(rewards.values())), dim=0)
 
-            reward[robot_id] = curr_reward
+            total_reward += curr_reward
+
+        for robot_id, robot in self.robots.items():
+            reward[robot_id] = total_reward/2
 
         # Logging
         # for key, value in reward.items():
