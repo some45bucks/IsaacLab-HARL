@@ -149,7 +149,7 @@ class HeterogeneousPushMultiAgentFlatEnvCfg(DirectMARLEnvCfg):
         spawn=sim_utils.CuboidCfg( 
             size=(3,2,2),
             rigid_props=sim_utils.RigidBodyPropertiesCfg(),
-            mass_props=sim_utils.MassPropertiesCfg(mass=50),
+            mass_props=sim_utils.MassPropertiesCfg(mass=10),
             collision_props=sim_utils.CollisionPropertiesCfg(),
             visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(0.,1.,0.)),
             # visual_material=sim_utils.GlassMdlCfg(glass_color=(0.0, 1.0, 0.0), frosting_roughness=0.7),
