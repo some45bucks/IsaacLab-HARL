@@ -217,13 +217,13 @@ class AnymalCMultiAgentFlatEnvCfg(DirectMARLEnvCfg):
     flat_orientation_reward_scale = 1.0
     flat_bar_roll_angle_reward_scale = 1.0
 
-    bar_z_min_pos = 0.4
+    bar_z_min_pos = 0.1
     bar_fallen_reward = -1.0
 
-    anymal_min_z_pos = 0.3
+    anymal_min_z_pos = 0.1
     anymal_fall_reward = -1.0
     finished_episode_reward = 10
-    max_bar_roll_angle_rad = 0.1
+    max_bar_roll_angle_rad = 1
 
 
 @configclass
