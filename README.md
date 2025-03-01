@@ -1,3 +1,77 @@
+# For Heterogeneous Agent Reinforcement Learning
+
+Use these instructions to install isaac sim -> [here](https://docs.omniverse.nvidia.com/isaacsim/latest/installation/install_python.html#install-isaac-sim-using-pip)
+
+Make sure to run all the following commands with your isaaclab conda environment activated, as highlighted in the instruction provided above.
+
+```bash
+cd IsaacLab
+./isaaclab.sh -i
+pip install gymnasium==0.29.0
+```
+
+At this point you should be able to run the trained multi-agent homogeneous environment.
+
+```bash
+cd IsaacLab
+python source/standalone/workflows/harl/play_keyboard.py --task Isaac-Multi-Agent-Flat-Anymal-C-Direct-v0 --num_envs 1 --algorithm happo --dir source/extensions/omni.isaac.lab_tasks/omni/isaac/lab_tasks/direct/anymal_c_multi_agent/best_model
+```
+
+Which will allow you to interact with the trained by using the keyboard to give velocity commands.
+
+```
+a,d = angular velocity commands (left, right)
+arrow keys = x,y velocity commands (forward, backward, left, right)
+```
+
+If you are just interested in running the environment and seeing how the environment resets, training works etc. You can use the `play.py` script instead.
+
+# Training custom environment
+
+
+```bash
+python source/standalone/workflows/harl/train.py  --task Isaac-Multi-Agent-Flat-Anymal-C-Direct-v0 --video_interval 10_000 --num_envs 2048 --save_interval 10 --log_interval 10 --algorithm happo --headless --num_env_steps 2_000_000_000
+```
+
+You can run `python play.py -h` to see all arguments. Also note that the configuration for the algorithms can be found in their yaml files, an
+example of which can be found at `source/extensions/omni.isaac.lab_tasks/omni/isaac/lab_tasks/direct/anymal_c_multi_agent/agents/harl_ppo_cfg.yaml`, however, these will be overwritten with any parameters you define in the `train.py` script.
+
+
+# Registering a New Environment in Isaac Lab
+
+Isaac Lab allows you to register custom environments in the Gym framework, enabling efficient use with Gym's `make` command. This guide provides steps to register a new environment, using the example of the `DirectEnvRL`-based Piano Movers environment.
+
+---
+
+## Environment Registration Example
+
+The environment `DirectEnvRL` is used as the base for the multi agent anymal c bar carrying environment, and it is registered in the Gym environments through the `__init__.py` file. To better understand the process, you can explore the following example folder:
+
+```
+IsaacLab/source/extensions/omni.isaac.lab_tasks/omni/isaac/lab_tasks/direct/anymal_c_multi_agent
+```
+
+This folder contains the environment code and the necessary registration logic. To register your custom environment, follow these steps:
+
+---
+
+## Steps to Register a New Environment
+
+### 1. **Modify Extensions**
+
+If you are adding a new `DirectEnvRL` environment, place your code in the following directory:
+
+```
+IsaacLab/source/extensions/omni.isaac.lab_tasks/omni/isaac/lab_tasks/direct/
+```
+
+### 2. **Update `__init__.py`**
+
+Ensure that your new environment is registered in the Gym framework by adding the appropriate registration logic to the `__init__.py` file in the corresponding directory.
+
+Now you can use the instructions provided at the beginning of this README for training the environment. We advise you also utilize the debugging tools provided in Visual Studio Code and setup the corresponding `launch.json` file to aid in your development.
+
+
 ![Isaac Lab](docs/source/_static/isaaclab.jpg)
 # Isaac Lab
 
