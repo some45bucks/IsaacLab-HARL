@@ -1,5 +1,15 @@
 # For Heterogeneous Agent Reinforcement Learning
 
+<!-- ![GIF 1](withoutpolicy.gif) ![GIF 2](withpolicy.gif) -->
+
+<div style="display: flex; justify-content: space-around;">
+    <img src="withoutpolicy.gif" width="45%">
+    <img src="withpolicy.gif" width="45%">
+</div>
+
+*Before and after results of multi-agent reinforcement learning for bar balancing task*
+
+---
 Use [these instructions](https://docs.omniverse.nvidia.com/isaacsim/latest/installation/install_python.html#install-isaac-sim-using-pip) to install isaac sim.
 
 Make sure to run all the following commands with your isaaclab conda environment activated, as highlighted in the instructions provided above.
