@@ -4,11 +4,21 @@ Use these instructions to install isaac sim -> [here](https://docs.omniverse.nvi
 
 Make sure to run all the following commands with your isaaclab conda environment activated, as highlighted in the instruction provided above.
 
+
 ```bash
 cd IsaacLab
 ./isaaclab.sh -i
 pip install gymnasium==0.29.0
 ```
+Note that we modified the `isaaclab.sh` install script to point to our fork of the [HARL repository](https://github.com/some45bucks/HARL.git), which the script will automatically install into your conda environment. If you want to make changes to the HARL code yourself, with your conda environment activated run the following
+
+```bash
+git clone https://github.com/some45bucks/HARL.git
+cd HARL
+pip install -e .
+```
+This will uninstall the default HARL and reference this one instead, recognizing any changes to the code that you make.
+
 
 At this point you should be able to run the trained multi-agent homogeneous environment.
 
