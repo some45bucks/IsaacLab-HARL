@@ -2,7 +2,7 @@
 
 Use [these instructions](https://docs.omniverse.nvidia.com/isaacsim/latest/installation/install_python.html#install-isaac-sim-using-pip) to install isaac sim.
 
-Make sure to run all the following commands with your isaaclab conda environment activated, as highlighted in the instruction provided above.
+Make sure to run all the following commands with your isaaclab conda environment activated, as highlighted in the instructions provided above.
 
 
 ```bash
@@ -20,7 +20,7 @@ pip install -e .
 This will uninstall the default HARL and reference this one instead, recognizing any changes to the code that you make.
 
 
-At this point you should be able to run the trained multi-agent homogeneous environment.
+At this point you should be able to run the trained cooperative bar balancing task.
 
 ```bash
 cd IsaacLab
@@ -58,13 +58,7 @@ Isaac Lab allows you to register custom environments in the Gym framework, enabl
 
 ## Environment Registration Example
 
-The environment `DirectEnvRL` is used as the base for the multi agent anymal c bar carrying environment, and it is registered in the Gym environments through the `__init__.py` file. To better understand the process, you can explore the following example folder:
-
-```
-IsaacLab/source/extensions/omni.isaac.lab_tasks/omni/isaac/lab_tasks/direct/anymal_c_multi_agent
-```
-
-This folder contains the environment code and the necessary registration logic. To register your custom environment, follow these steps:
+The best way to understand how to set up your own custom environment is by looking at the environment set up at `IsaacLab/source/extensions/omni.isaac.lab_tasks/omni/isaac/lab_tasks/direct/anymal_c_multi_agent`, which is the bar balancing environment. A simple way to get started is to make a copy of this folder and begin modifying the environment to your specified needs. This folder contains the environment code and the necessary registration logic. To register your custom environment, follow these steps:
 
 ---
 
