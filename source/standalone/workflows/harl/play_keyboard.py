@@ -191,7 +191,7 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
                 actions[:, agent_id, :action_space] = action.cpu().numpy()
                 rnn_states[:, agent_id, :] = rnn_state.cpu().numpy()
 
-            runner.env.unwrapped._commands[:,:] = movements['rotate_left']
+            runner.env.unwrapped._commands[:,:] = move_vector
 
             obs, _, rewards, dones, _, _ = runner.env.step(actions)
 
