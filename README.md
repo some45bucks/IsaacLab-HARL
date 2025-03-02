@@ -1,6 +1,6 @@
 # For Heterogeneous Agent Reinforcement Learning
 
-Use these instructions to install isaac sim -> [here](https://docs.omniverse.nvidia.com/isaacsim/latest/installation/install_python.html#install-isaac-sim-using-pip)
+Use [these instructions](https://docs.omniverse.nvidia.com/isaacsim/latest/installation/install_python.html#install-isaac-sim-using-pip) to install isaac sim.
 
 Make sure to run all the following commands with your isaaclab conda environment activated, as highlighted in the instruction provided above.
 
