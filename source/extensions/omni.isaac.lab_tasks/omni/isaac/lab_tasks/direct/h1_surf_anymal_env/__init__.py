@@ -10,15 +10,15 @@ Ant locomotion environment.
 import gymnasium as gym
 
 from . import agents
-from .h1_surf_anymal_env import HeterogeneousMultiAgentFlatSurfEnvCfg, HeterogeneousMultiAgentRoughSurfEnvCfg
+from .h1_surf_anymal_env import HeterogeneousMultiAgentSurf,HeterogeneousMultiAgentFlatSurfEnvCfg, HeterogeneousMultiAgentRoughSurfEnvCfg
 
 ##
 # Register Gym environments.
 ##
 
 gym.register(
-    id="Isaac-Anymal-H1-Surf-Flat-Direct-v0",
-    entry_point="omni.isaac.lab_tasks.direct.h1_anymal_env:HeterogeneousMultiAgentSurf",
+    id="Isaac-Anymal-H1-Surf-Flat-Direct",
+    entry_point="omni.isaac.lab_tasks.direct.h1_surf_anymal_env:HeterogeneousMultiAgentSurf",
     disable_env_checker=True,
     kwargs={
         "env_cfg_entry_point": HeterogeneousMultiAgentFlatSurfEnvCfg,
@@ -29,8 +29,8 @@ gym.register(
     },
 )
 gym.register(
-    id="Isaac-Anymal-H1-Surf-Rough-Direct-v0",
-    entry_point="omni.isaac.lab_tasks.direct.multi_agent_heterogeneous:HeterogeneousMultiAgentSurf",
+    id="Isaac-Anymal-H1-Surf-Rough-Direct",
+    entry_point="omni.isaac.lab_tasks.direct.h1_surf_anymal_env:HeterogeneousMultiAgentSurf",
     disable_env_checker=True,
     kwargs={
         "env_cfg_entry_point": HeterogeneousMultiAgentRoughSurfEnvCfg,

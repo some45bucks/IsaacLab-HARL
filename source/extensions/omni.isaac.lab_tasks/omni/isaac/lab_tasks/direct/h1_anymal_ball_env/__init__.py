@@ -10,7 +10,7 @@ Ant locomotion environment.
 import gymnasium as gym
 
 from . import agents
-from .h1_anymal_ball_env import HeterogeneousMultiAgentFlatEnvCfg, HeterogeneousMultiAgentRoughEnvCfg
+from .h1_anymal_ball_env import HeterogeneousMultiAgentBall,HeterogeneousMultiAgentFlatEnvCfg, HeterogeneousMultiAgentRoughEnvCfg
 
 ##
 # Register Gym environments.
@@ -18,7 +18,7 @@ from .h1_anymal_ball_env import HeterogeneousMultiAgentFlatEnvCfg, Heterogeneous
 
 gym.register(
     id="Isaac-Anymal-H1-Ball-Direct-v0",
-    entry_point="omni.isaac.lab_tasks.direct.h1_anymal_piano_env:HeterogeneousMultiAgentBall",
+    entry_point="omni.isaac.lab_tasks.direct.h1_anymal_ball_env:HeterogeneousMultiAgentBall",
     disable_env_checker=True,
     kwargs={
         "env_cfg_entry_point": HeterogeneousMultiAgentFlatEnvCfg,
@@ -31,7 +31,7 @@ gym.register(
 
 gym.register(
     id="Isaac-Anymal-H1-Ball-Rough-Direct-v0",
-    entry_point="omni.isaac.lab_tasks.direct.multi_agent_heterogeneous:HeterogeneousMultiAgentBall",
+    entry_point="omni.isaac.lab_tasks.direct.h1_anymal_ball_env:HeterogeneousMultiAgentBall",
     disable_env_checker=True,
     kwargs={
         "env_cfg_entry_point": HeterogeneousMultiAgentRoughEnvCfg,
