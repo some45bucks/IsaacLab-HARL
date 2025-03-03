@@ -46,8 +46,6 @@ arrow keys = x,y velocity commands (forward, backward, left, right)
 
 If you are just interested in running the environment and seeing how the environment resets, training works etc. You can use the `play.py` script instead.
 
-If you want to use the soccer or piano environments, unzip the assets.zip folder into the Isaaclab directory.
-
 
 # Training custom environment
 
