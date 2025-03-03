@@ -29,8 +29,7 @@ train:
   # whether to consider the case of truncation when an episode is done
   use_proper_time_limits: True
   # if set, load models from this directory; otherwise, randomly initialise the models
-  # model_dir: /home/isaacp/sharedrepos/IsaacLab/source/extensions/omni.isaac.lab_tasks/omni/isaac/lab_tasks/direct/h1_anymal_env/model
-  model_dir: /home/frutiger/Documents/harl_isaac/IsaacLab/source/extensions/omni.isaac.lab_tasks/omni/isaac/lab_tasks/direct/h1_anymal_piano_env/model
+  model_dir: #
 
 eval:
   # whether to use evaluation

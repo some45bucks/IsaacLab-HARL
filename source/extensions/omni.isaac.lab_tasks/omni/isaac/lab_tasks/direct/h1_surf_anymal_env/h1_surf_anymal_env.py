@@ -313,7 +313,7 @@ def define_markers() -> VisualizationMarkers:
     )
     return VisualizationMarkers(marker_cfg)
 
-class HeterogeneousMultiAgent(DirectMARLEnv):
+class HeterogeneousMultiAgentSurf(DirectMARLEnv):
     cfg: HeterogeneousMultiAgentFlatSurfEnvCfg | HeterogeneousMultiAgentRoughSurfEnvCfg
 
     def __init__(self, cfg: HeterogeneousMultiAgentFlatSurfEnvCfg | HeterogeneousMultiAgentRoughSurfEnvCfg, render_mode: str | None = None, **kwargs):

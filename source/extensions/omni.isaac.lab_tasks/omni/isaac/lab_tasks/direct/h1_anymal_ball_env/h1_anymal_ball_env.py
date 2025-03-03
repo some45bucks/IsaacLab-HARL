@@ -294,7 +294,7 @@ def define_markers() -> VisualizationMarkers:
     )
     return VisualizationMarkers(marker_cfg)
 
-class HeterogeneousMultiAgent(DirectMARLEnv):
+class HeterogeneousMultiAgentBall(DirectMARLEnv):
     cfg: HeterogeneousMultiAgentFlatEnvCfg | HeterogeneousMultiAgentRoughEnvCfg
 
     def __init__(self, cfg: HeterogeneousMultiAgentFlatEnvCfg | HeterogeneousMultiAgentRoughEnvCfg, render_mode: str | None = None, **kwargs):
