@@ -273,7 +273,7 @@ class AnymalCMultiAgentRoughEnvCfg(AnymalCMultiAgentFlatEnvCfg):
     flat_orientation_reward_scale = 0.0
 
 
-class AnymalCMultiAgent(DirectMARLEnv):
+class AnymalCMultiAgentBar(DirectMARLEnv):
     cfg: AnymalCMultiAgentFlatEnvCfg | AnymalCMultiAgentRoughEnvCfg
 
     def __init__(self, cfg: AnymalCMultiAgentFlatEnvCfg | AnymalCMultiAgentRoughEnvCfg, render_mode: str | None = None, **kwargs):

@@ -29,7 +29,7 @@ train:
   # whether to consider the case of truncation when an episode is done
   use_proper_time_limits: True
   # if set, load models from this directory; otherwise, randomly initialise the models
-  model_dir: /home/jakehate/spot-issaclab/IsaacLab/source/extensions/omni.isaac.lab_tasks/omni/isaac/lab_tasks/direct/anymal_c_multi_agent/models
+  model_dir: #
 eval:
   # whether to use evaluation
   use_eval: True
