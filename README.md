@@ -1,16 +1,36 @@
 # For Heterogeneous Agent Reinforcement Learning
 
-Use these instructions to install isaac sim -> [here](https://docs.omniverse.nvidia.com/isaacsim/latest/installation/install_python.html#install-isaac-sim-using-pip)
+<!-- ![GIF 1](withoutpolicy.gif) ![GIF 2](withpolicy.gif) -->
+<!-- 
+<div style="display: flex; justify-content: space-around;">
+    <img src="withoutpolicy.gif" width="45%">
+    <img src="withpolicy.gif" width="45%">
+</div>
 
-Make sure to run all the following commands with your isaaclab conda environment activated, as highlighted in the instruction provided above.
+*Before and after results of multi-agent reinforcement learning for bar balancing task* -->
+
+---
+Use [these instructions](https://docs.omniverse.nvidia.com/isaacsim/latest/installation/install_python.html#install-isaac-sim-using-pip) to install isaac sim.
+
+Make sure to run all the following commands with your isaaclab conda environment activated, as highlighted in the instructions provided above.
+
 
 ```bash
 cd IsaacLab
 ./isaaclab.sh -i
 pip install gymnasium==0.29.0
 ```
+Note that we modified the `isaaclab.sh` install script to point to our fork of the [HARL repository](https://github.com/some45bucks/HARL.git), which the script will automatically install into your conda environment. If you want to make changes to the HARL code yourself, with your conda environment activated run the following
 
-At this point you should be able to run the trained multi-agent homogeneous environment.
+```bash
+git clone https://github.com/some45bucks/HARL.git
+cd HARL
+pip install -e .
+```
+This will uninstall the default HARL and reference this one instead, recognizing any changes to the code that you make.
+
+
+At this point you should be able to run the trained cooperative bar balancing task.
 
 ```bash
 cd IsaacLab
@@ -25,6 +45,9 @@ arrow keys = x,y velocity commands (forward, backward, left, right)
 ```
 
 If you are just interested in running the environment and seeing how the environment resets, training works etc. You can use the `play.py` script instead.
+
+If you want to use the soccer or piano environments, unzip the assets.zip folder into the Isaaclab directory.
+
 
 # Training custom environment
 
@@ -45,13 +68,7 @@ Isaac Lab allows you to register custom environments in the Gym framework, enabl
 
 ## Environment Registration Example
 
-The environment `DirectEnvRL` is used as the base for the multi agent anymal c bar carrying environment, and it is registered in the Gym environments through the `__init__.py` file. To better understand the process, you can explore the following example folder:
-
-```
-IsaacLab/source/extensions/omni.isaac.lab_tasks/omni/isaac/lab_tasks/direct/anymal_c_multi_agent
-```
-
-This folder contains the environment code and the necessary registration logic. To register your custom environment, follow these steps:
+The best way to understand how to set up your own custom environment is by looking at the environment set up at `IsaacLab/source/extensions/omni.isaac.lab_tasks/omni/isaac/lab_tasks/direct/anymal_c_multi_agent`, which is the bar balancing environment. A simple way to get started is to make a copy of this folder and begin modifying the environment to your specified needs. This folder contains the environment code and the necessary registration logic. To register your custom environment, follow these steps:
 
 ---
 
