@@ -138,7 +138,7 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
             obs, _, rewards, dones, _, _ = runner.env.step(actions)
 
             total_rewards += rewards
-            print(f"Commands : {runner.env.unwrapped._commands[:,:]}")
+            print(f"Commands : {runner.env.unwrapped._commands[:, :]}")
             print(f"Average reward: {rewards.mean(axis=0)}")
             dones_env = np.all(dones, axis=1)
             masks = np.ones(
