@@ -1,11 +1,11 @@
-# Copyright (c) 2022-2024, The Isaac Lab Project Developers.
+# Copyright (c) 2022-2025, The Isaac Lab Project Developers.
 # All rights reserved.
 #
 # SPDX-License-Identifier: BSD-3-Clause
 
 from __future__ import annotations
 
-from omni.isaac.lab_assets import HUMANOID_CFG
+from omni.isaac.lab_assets import H1_CFG
 
 import omni.isaac.lab.sim as sim_utils
 from omni.isaac.lab.assets import ArticulationCfg
@@ -16,7 +16,7 @@ from omni.isaac.lab.terrains import TerrainImporterCfg
 from omni.isaac.lab.utils import configclass
 
 from omni.isaac.lab_tasks.direct.locomotion.locomotion_env import LocomotionEnv
-from omni.isaac.lab_assets import H1_CFG
+
 
 @configclass
 class H1EnvCfg(DirectRLEnvCfg):

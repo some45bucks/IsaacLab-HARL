@@ -118,7 +118,7 @@ class LocomotionVelocityEnv(DirectRLEnv):
                 self.dof_pos_scaled,
                 self.dof_vel * self.cfg.dof_vel_scale,
                 self.actions,
-                self.commands
+                self.commands,
             ),
             dim=-1,
         )
@@ -171,11 +171,9 @@ class LocomotionVelocityEnv(DirectRLEnv):
         alive_reward_scale: float,
         motor_effort_ratio: torch.Tensor,
     ):
-        
+
         # linear velocity tracking
-        lin_vel_error = torch.sum(
-            torch.square(commands[:, :2] - robot.data.root_com_lin_vel_b[:, :2]), dim=1
-        )
+        lin_vel_error = torch.sum(torch.square(commands[:, :2] - robot.data.root_com_lin_vel_b[:, :2]), dim=1)
         # yaw rate tracking
         yaw_rate_error = torch.square(commands[:, 2] - robot.data.root_com_ang_vel_b[:, 2])
         # z velocity tracking
@@ -207,7 +205,7 @@ class LocomotionVelocityEnv(DirectRLEnv):
 
         # reward for duration of staying alive
         alive_reward = torch.ones_like(potentials) * alive_reward_scale
-        progress_reward = potentials - prev_potentials
+        potentials - prev_potentials
 
         total_reward = (
             # progress_reward +
@@ -242,7 +240,6 @@ class LocomotionVelocityEnv(DirectRLEnv):
         # self.commands[env_ids] = torch.zeros_like(self.commands[env_ids])
         # self.commands[:,2] = 0.0
 
-
         joint_pos = self.robot.data.default_joint_pos[env_ids]
         joint_vel = self.robot.data.default_joint_vel[env_ids]
         default_root_state = self.robot.data.default_root_state[env_ids]
@@ -257,9 +254,6 @@ class LocomotionVelocityEnv(DirectRLEnv):
         self.potentials[env_ids] = -torch.norm(to_target, p=2, dim=-1) / self.cfg.sim.dt
 
         self._compute_intermediate_values()
-
-
-
 
 
 @torch.jit.script

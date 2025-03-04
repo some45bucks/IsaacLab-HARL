@@ -1,9 +1,18 @@
+# Copyright (c) 2022-2025, The Isaac Lab Project Developers.
+# All rights reserved.
+#
+# SPDX-License-Identifier: BSD-3-Clause
+
 """Train an algorithm."""
+
 import argparse
 import sys
-import json
+
+pass
 import time
-import tensorboardX
+
+pass
+
 from omni.isaac.lab.app import AppLauncher
 
 parser = argparse.ArgumentParser(description="Train an RL agent with HARL.")
@@ -20,23 +29,23 @@ parser.add_argument("--num_env_steps", type=int, default=None, help="RL Policy t
 parser.add_argument("--dir", type=str, default=None, help="folder with trained models")
 
 parser.add_argument(
-        "--algorithm",
-        type=str,
-        default="happo",
-        choices=[
-            "happo",
-            "hatrpo",
-            "haa2c",
-            "haddpg",
-            "hatd3",
-            "hasac",
-            "had3qn",
-            "maddpg",
-            "matd3",
-            "mappo",
-        ],
-        help="Algorithm name. Choose from: happo, hatrpo, haa2c, haddpg, hatd3, hasac, had3qn, maddpg, matd3, mappo.",
-    )
+    "--algorithm",
+    type=str,
+    default="happo",
+    choices=[
+        "happo",
+        "hatrpo",
+        "haa2c",
+        "haddpg",
+        "hatd3",
+        "hasac",
+        "had3qn",
+        "maddpg",
+        "matd3",
+        "mappo",
+    ],
+    help="Algorithm name. Choose from: happo, hatrpo, haa2c, haddpg, hatd3, hasac, had3qn, maddpg, matd3, mappo.",
+)
 
 # append AppLauncher cli args
 AppLauncher.add_app_launcher_args(parser)
@@ -53,63 +62,66 @@ sys.argv = [sys.argv[0]] + hydra_args
 app_launcher = AppLauncher(args_cli)
 simulation_app = app_launcher.app
 
-import gymnasium as gym
+pass
 import os
-import random
-from datetime import datetime
+
+pass
+pass
+pass
 from harl.runners import RUNNER_REGISTRY
 
-from omni.isaac.lab.envs import (
-    DirectMARLEnv,
-    DirectMARLEnvCfg,
-    DirectRLEnvCfg,
-    ManagerBasedRLEnvCfg,
-    multi_agent_to_single_agent,
-)
-from omni.isaac.lab.utils.assets import retrieve_file_path
-from omni.isaac.lab.utils.dict import print_dict
-from omni.isaac.lab.utils.io import dump_pickle, dump_yaml
+from omni.isaac.lab.envs import DirectMARLEnvCfg, DirectRLEnvCfg, ManagerBasedRLEnvCfg
+
+pass
+pass
+pass
 
 import omni.isaac.lab_tasks  # noqa: F401
 from omni.isaac.lab_tasks.utils.hydra import hydra_task_config
 
-import tensorboardX
-
 agent_cfg_entry_point = "harl_ppo_cfg_entry_point"
+
 
 @hydra_task_config(args_cli.task, agent_cfg_entry_point)
 def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agent_cfg: dict):
 
     args = args_cli.__dict__
 
-    args['env'] = 'isaaclab'
-    args['algo'] = args['algorithm']
+    args["env"] = "isaaclab"
+    args["algo"] = args["algorithm"]
 
     algo_args = agent_cfg
 
-    algo_args['eval']['use_eval'] = False
-    algo_args['train']['n_rollout_threads'] = args['num_envs']
-    algo_args['train']['num_env_steps'] = args['num_env_steps']
-    algo_args['train']['eval_interval'] = args['save_interval']
-    algo_args['train']['log_interval'] = args['log_interval']
-    algo_args['train']['model_dir'] = args['dir']
-    algo_args['seed']['specify_seed'] = True
-    algo_args['seed']['seed'] = args['seed']
-
+    algo_args["eval"]["use_eval"] = False
+    algo_args["train"]["n_rollout_threads"] = args["num_envs"]
+    algo_args["train"]["num_env_steps"] = args["num_env_steps"]
+    algo_args["train"]["eval_interval"] = args["save_interval"]
+    algo_args["train"]["log_interval"] = args["log_interval"]
+    algo_args["train"]["model_dir"] = args["dir"]
+    algo_args["seed"]["specify_seed"] = True
+    algo_args["seed"]["seed"] = args["seed"]
 
     env_args = {}
-    env_cfg.scene.num_envs = args['num_envs']
-    env_args['task'] = args['task']
-    env_args['config'] = env_cfg
+    env_cfg.scene.num_envs = args["num_envs"]
+    env_args["task"] = args["task"]
+    env_args["config"] = env_cfg
     hms_time = time.strftime("%Y-%m-%d-%H-%M-%S", time.localtime())
-    env_args['video_settings'] = {
+    env_args["video_settings"] = {
         "video": args["video"],
         "video_length": args["video_length"],
         "video_interval": args["video_interval"],
-        "log_dir": os.path.join(algo_args['logger']['log_dir'],"isaaclab",args['task'],args['algorithm'], args["exp_name"], "-".join(["seed-{:0>5}".format(agent_cfg['seed']['seed']), hms_time]), 'videos'),
+        "log_dir": os.path.join(
+            algo_args["logger"]["log_dir"],
+            "isaaclab",
+            args["task"],
+            args["algorithm"],
+            args["exp_name"],
+            "-".join(["seed-{:0>5}".format(agent_cfg["seed"]["seed"]), hms_time]),
+            "videos",
+        ),
     }
 
-    #create runner
+    # create runner
     runner = RUNNER_REGISTRY[args["algo"]](args, algo_args, env_args)
     runner.run()
     runner.close()

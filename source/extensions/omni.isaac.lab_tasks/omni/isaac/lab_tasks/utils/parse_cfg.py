@@ -133,8 +133,8 @@ def parse_env_cfg(
     if num_envs is not None:
         cfg.scene.num_envs = num_envs
 
-    if 'num_robots' in kwargs:
-        cfg.num_robots = kwargs['num_robots']
+    if "num_robots" in kwargs:
+        cfg.num_robots = kwargs["num_robots"]
 
     return cfg
 

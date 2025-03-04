@@ -6,7 +6,7 @@
 # fmt: off
 
 # [start-init-import]
-from .h1_env import H1Env, H1EnvCfg
+from .h1_env import H1EnvCfg
 # [end-init-import]
 
 # [start-init-register]

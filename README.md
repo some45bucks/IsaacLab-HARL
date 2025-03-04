@@ -1,7 +1,7 @@
 # For Heterogeneous Agent Reinforcement Learning
 
 <!-- ![GIF 1](withoutpolicy.gif) ![GIF 2](withpolicy.gif) -->
-<!-- 
+<!--
 <div style="display: flex; justify-content: space-around;">
     <img src="withoutpolicy.gif" width="45%">
     <img src="withpolicy.gif" width="45%">

@@ -1,3 +1,8 @@
+# Copyright (c) 2022-2025, The Isaac Lab Project Developers.
+# All rights reserved.
+#
+# SPDX-License-Identifier: BSD-3-Clause
+
 # Copyright (c) 2018-2022, NVIDIA Corporation
 # All rights reserved.
 #
@@ -126,17 +131,17 @@ def convert_asset_instanceable(asset_usd_path, source_prim_path, save_as_path=No
         omni.usd.get_context().save_stage()
     else:
         omni.usd.get_context().save_as_stage(save_as_path)
-        
+
+
 # to run this code you must open Isaac Sim and run the following code in the Python console
 # go to window -> Python Console
 # then copy and paste the ALL OF THIS CODE IN THIS DOCUMENT
 # make sure to change the paths to the correct paths on your computer
 # this code will convert the grandPiano.usd file to an instanceable asset
-# in saac 4.2 old documention you can learn more:
+# in saac 4.2 old documentation you can learn more:
 # https://docs.omniverse.nvidia.com/isaacsim/latest/isaac_lab_tutorials/tutorial_instanceable_assets.html#modifying-existing-assets
 convert_asset_instanceable(
     asset_usd_path="/home/frutiger/Downloads/grandPiano/10384_GrandPiano.usd",
     source_prim_path="/World",
-    save_as_path="/home/frutiger/Downloads/grandPiano/GrandPiano_instanceable.usd"
+    save_as_path="/home/frutiger/Downloads/grandPiano/GrandPiano_instanceable.usd",
 )
-

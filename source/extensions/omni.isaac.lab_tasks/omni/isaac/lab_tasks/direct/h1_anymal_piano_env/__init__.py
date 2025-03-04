@@ -1,4 +1,4 @@
-# Copyright (c) 2022-2024, The Isaac Lab Project Developers.
+# Copyright (c) 2022-2025, The Isaac Lab Project Developers.
 # All rights reserved.
 #
 # SPDX-License-Identifier: BSD-3-Clause
@@ -10,7 +10,11 @@ Ant locomotion environment.
 import gymnasium as gym
 
 from . import agents
-from .h1_anymal_piano_env import HeterogeneousMultiAgentPiano,HeterogeneousMultiAgentFlatEnvCfg, HeterogeneousMultiAgentRoughEnvCfg
+from .h1_anymal_piano_env import (
+    HeterogeneousMultiAgentFlatEnvCfg,
+    HeterogeneousMultiAgentPiano,
+    HeterogeneousMultiAgentRoughEnvCfg,
+)
 
 ##
 # Register Gym environments.
