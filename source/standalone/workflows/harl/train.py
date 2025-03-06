@@ -7,11 +7,7 @@
 
 import argparse
 import sys
-
-pass
 import time
-
-pass
 
 from omni.isaac.lab.app import AppLauncher
 
@@ -62,19 +58,11 @@ sys.argv = [sys.argv[0]] + hydra_args
 app_launcher = AppLauncher(args_cli)
 simulation_app = app_launcher.app
 
-pass
 import os
 
-pass
-pass
-pass
 from harl.runners import RUNNER_REGISTRY
 
 from omni.isaac.lab.envs import DirectMARLEnvCfg, DirectRLEnvCfg, ManagerBasedRLEnvCfg
-
-pass
-pass
-pass
 
 import omni.isaac.lab_tasks  # noqa: F401
 from omni.isaac.lab_tasks.utils.hydra import hydra_task_config

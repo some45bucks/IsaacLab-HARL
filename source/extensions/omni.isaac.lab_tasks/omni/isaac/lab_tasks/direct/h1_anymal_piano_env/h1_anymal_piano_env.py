@@ -6,8 +6,6 @@
 from __future__ import annotations
 
 import copy
-
-pass
 import torch
 
 import omni.isaac.core.utils.torch as torch_utils

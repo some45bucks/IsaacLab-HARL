@@ -6,8 +6,6 @@
 from __future__ import annotations
 
 import copy
-
-pass
 import torch
 
 import omni.isaac.lab.envs.mdp as mdp
