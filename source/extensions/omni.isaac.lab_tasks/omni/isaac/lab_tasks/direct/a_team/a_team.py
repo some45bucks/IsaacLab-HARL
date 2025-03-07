@@ -164,7 +164,7 @@ class HeterogeneousMultiAgentFlatEnvCfg(DirectMARLEnvCfg):
     
     robot_2: ArticulationCfg = H1_CFG.replace(prim_path="/World/envs/env_.*/Robot_2")
     robot_2.init_state.rot = (1.0, 0.0, 0.0, 1)
-    robot_2.init_state.pos = (1.0, 0.0, 2.0)
+    robot_2.init_state.pos = (2.0, 0.0, 1)
     # # rec prism
     # cfg_rec_prism= RigidObjectCfg(
     #     prim_path="/World/envs/env_.*/Object",
