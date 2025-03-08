@@ -400,62 +400,26 @@ class HeterogeneousMultiAgentTeam(DirectMARLEnv):
             self.feet_ids[robot_id] = _feet_ids
             self.undesired_body_contact_ids[robot_id] = _undesired_contact_body_ids
 
-        self.potentials = torch.zeros(self.num_envs, dtype=torch.float32, device=self.sim.device)
-        self.prev_potentials = torch.zeros_like(self.potentials)
         self.targets = torch.tensor([1000, 0, 0], dtype=torch.float32, device=self.sim.device).repeat(
             (self.num_envs, 1)
         )
-        self.joint_gears = torch.tensor(self.cfg.joint_gears, dtype=torch.float32, device=self.sim.device)
-        self.targets = torch.tensor([1000, 0, 0], dtype=torch.float32, device=self.sim.device).repeat(
-            (self.num_envs, 1)
-        )
-        self.targets += self.scene.env_origins
-        self.heading_vec = torch.tensor([1, 0, 0], dtype=torch.float32, device=self.sim.device).repeat(
-            (self.num_envs, 1)
-        )
-        self.up_vec = torch.tensor([0, 0, 1], dtype=torch.float32, device=self.sim.device).repeat((self.num_envs, 1))
-        self.start_rotation = torch.tensor([1, 0, 0, 0], device=self.sim.device, dtype=torch.float32)
-        self.inv_start_rot = quat_conjugate(self.start_rotation).repeat((self.num_envs, 1))
-        self.basis_vec0 = self.heading_vec.clone()
-        self.basis_vec1 = self.up_vec.clone()
-        # for robot 2
-        self.potentials_2 = torch.zeros(self.num_envs, dtype=torch.float32, device=self.sim.device)
-        self.prev_potentials_2 = torch.zeros_like(self.potentials_2)
-        self.targets_2 = torch.tensor([1000, 0, 0], dtype=torch.float32, device=self.sim.device).repeat(
-            (self.num_envs, 1)
-        )
-        self.joint_gears_2 = torch.tensor(self.cfg.joint_gears, dtype=torch.float32, device=self.sim.device)
-        self.targets_2 = torch.tensor([1000, 0, 0], dtype=torch.float32, device=self.sim.device).repeat(
-            (self.num_envs, 1)
-        )
-        self.targets_2 += self.scene.env_origins
-        self.heading_vec_2 = torch.tensor([1, 0, 0], dtype=torch.float32, device=self.sim.device).repeat(
-            (self.num_envs, 1)
-        )
-        self.up_vec_2 = torch.tensor([0, 0, 1], dtype=torch.float32, device=self.sim.device).repeat((self.num_envs, 1))
-        self.start_rotation_2 = torch.tensor([1, 0, 0, 0], device=self.sim.device, dtype=torch.float32)
-        self.inv_start_rot_2 = quat_conjugate(self.start_rotation_2).repeat((self.num_envs, 1))
-        self.basis_vec0_2 = self.heading_vec_2.clone()
-        self.basis_vec1_2 = self.up_vec_2.clone()
-        # for robot 3
-        self.potentials_3 = torch.zeros(self.num_envs, dtype=torch.float32, device=self.sim.device)
-        self.prev_potentials_3 = torch.zeros_like(self.potentials_3)
-        self.targets_3 = torch.tensor([1000, 0, 0], dtype=torch.float32, device=self.sim.device).repeat(
-            (self.num_envs, 1)
-        )
-        self.joint_gears_3 = torch.tensor(self.cfg.joint_gears, dtype=torch.float32, device=self.sim.device)
-        self.targets_3 = torch.tensor([1000, 0, 0], dtype=torch.float32, device=self.sim.device).repeat(
-            (self.num_envs, 1)
-        )
-        self.targets_3 += self.scene.env_origins
-        self.heading_vec_3 = torch.tensor([1, 0, 0], dtype=torch.float32, device=self.sim.device).repeat(
-            (self.num_envs, 1)
-        )
-        self.up_vec_3 = torch.tensor([0, 0, 1], dtype=torch.float32, device=self.sim.device).repeat((self.num_envs, 1))
-        self.start_rotation_3 = torch.tensor([1, 0, 0, 0], device=self.sim.device, dtype=torch.float32)
-        self.inv_start_rot_3 = quat_conjugate(self.start_rotation_3).repeat((self.num_envs, 1))
-        self.basis_vec0_3 = self.heading_vec_3.clone()
-        self.basis_vec1_3 = self.up_vec_3.clone()
+        
+        self.robot_data = {}
+        for i in range(4):
+            robot_id = f"robot_{i}"
+            self.robot_data[robot_id] = {
+            "potentials": torch.zeros(self.num_envs, dtype=torch.float32, device=self.sim.device),
+            "prev_potentials": torch.zeros(self.num_envs, dtype=torch.float32, device=self.sim.device),
+            "targets": torch.tensor([1000, 0, 0], dtype=torch.float32, device=self.sim.device).repeat((self.num_envs, 1)),
+            "joint_gears": torch.tensor(self.cfg.joint_gears, dtype=torch.float32, device=self.sim.device),
+            "heading_vec": torch.tensor([1, 0, 0], dtype=torch.float32, device=self.sim.device).repeat((self.num_envs, 1)),
+            "up_vec": torch.tensor([0, 0, 1], dtype=torch.float32, device=self.sim.device).repeat((self.num_envs, 1)),
+            "start_rotation": torch.tensor([1, 0, 0, 0], device=self.sim.device, dtype=torch.float32),
+            "inv_start_rot": quat_conjugate(torch.tensor([1, 0, 0, 0], device=self.sim.device, dtype=torch.float32)).repeat((self.num_envs, 1)),
+            "basis_vec0": torch.tensor([1, 0, 0], dtype=torch.float32, device=self.sim.device).repeat((self.num_envs, 1)),
+            "basis_vec1": torch.tensor([0, 0, 1], dtype=torch.float32, device=self.sim.device).repeat((self.num_envs, 1)),
+            }
+            self.robot_data[robot_id]["targets"] += self.scene.env_origins
 
 
     def _setup_scene(self):
@@ -528,140 +492,54 @@ class HeterogeneousMultiAgentTeam(DirectMARLEnv):
         self.robots[robot_id].set_joint_position_target(self.processed_actions[robot_id])
 
         robot_id = "robot_1"
-        forces = self.cfg.h1_action_scale * self.joint_gears * self.actions[robot_id]
+        forces = self.cfg.h1_action_scale * self.robot_data[robot_id]["joint_gears"] * self.actions[robot_id]
         self.robots[robot_id].set_joint_effort_target(forces, joint_ids=self._joint_dof_idx)
 
         robot_id = "robot_2"
-        forces = self.cfg.h1_action_scale * self.joint_gears * self.actions[robot_id]
+        forces = self.cfg.h1_action_scale * self.robot_data[robot_id]["joint_gears"] * self.actions[robot_id]
         self.robots[robot_id].set_joint_effort_target(forces, joint_ids=self._joint_dof_idx)
 
         robot_id = "robot_3"
-        forces = self.cfg.h1_action_scale * self.joint_gears * self.actions[robot_id]
+        forces = self.cfg.h1_action_scale * self.robot_data[robot_id]["joint_gears"] * self.actions[robot_id]
         self.robots[robot_id].set_joint_effort_target(forces, joint_ids=self._joint_dof_idx)
 
-    def _compute_intermediate_values_1(self):
-        self.torso_position, self.torso_rotation = (
-            self.robots["robot_1"].data.root_link_pos_w,
-            self.robots["robot_1"].data.root_link_quat_w,
-        )
-        self.velocity, self.ang_velocity = (
-            self.robots["robot_1"].data.root_com_lin_vel_w,
-            self.robots["robot_1"].data.root_com_ang_vel_w,
-        )
-        self.dof_pos, self.dof_vel = self.robots["robot_1"].data.joint_pos, self.robots["robot_1"].data.joint_vel
+    def _compute_intermediate_values(self, robot_idx: int):
+        robot_id = f"robot_{robot_idx}"
+        cur_robot_data = self.robot_data[robot_id]
+        robot = self.robots[robot_id]
+
+        cur_robot_data["torso_position"], cur_robot_data["torso_rotation"] = robot.data.root_link_pos_w, robot.data.root_link_quat_w
+        velocity, ang_velocity = robot.data.root_com_lin_vel_w, robot.data.root_com_ang_vel_w
+        cur_robot_data["dof_pos"], cur_robot_data["dof_vel"] = robot.data.joint_pos, robot.data.joint_vel
 
         (
-            self.up_proj,
-            self.heading_proj,
-            self.up_vec,
-            self.heading_vec,
-            self.vel_loc,
-            self.angvel_loc,
-            self.roll,
-            self.pitch,
-            self.yaw,
-            self.angle_to_target,
-            self.dof_pos_scaled,
-            self.prev_potentials,
-            self.potentials,
+            cur_robot_data["up_proj"],
+            cur_robot_data["heading_proj"],
+            cur_robot_data["up_vec"],
+            cur_robot_data["heading_vec"],
+            cur_robot_data["vel_loc"],
+            cur_robot_data["angvel_loc"],
+            cur_robot_data["roll"],
+            cur_robot_data["pitch"],
+            cur_robot_data["yaw"],
+            cur_robot_data["angle_to_target"],
+            cur_robot_data["dof_pos_scaled"],
+            cur_robot_data["prev_potentials"],
+            cur_robot_data["potentials"],
         ) = compute_intermediate_values(
-            self.targets,
-            self.torso_position,
-            self.torso_rotation,
-            self.velocity,
-            self.ang_velocity,
-            self.dof_pos,
-            self.robots["robot_1"].data.soft_joint_pos_limits[0, :, 0],
-            self.robots["robot_1"].data.soft_joint_pos_limits[0, :, 1],
-            self.inv_start_rot,
-            self.basis_vec0,
-            self.basis_vec1,
-            self.potentials,
-            self.prev_potentials,
-            self.cfg.sim.dt,
-        )
-
-    def _compute_intermediate_values_2(self):
-        self.torso_position_2, self.torso_rotation_2 = (
-            self.robots["robot_2"].data.root_link_pos_w,
-            self.robots["robot_2"].data.root_link_quat_w,
-        )
-        self.velocity_2, self.ang_velocity_2 = (
-            self.robots["robot_2"].data.root_com_lin_vel_w,
-            self.robots["robot_2"].data.root_com_ang_vel_w,
-        )
-        self.dof_pos_2, self.dof_vel_2 = self.robots["robot_2"].data.joint_pos, self.robots["robot_2"].data.joint_vel
-
-        (
-            self.up_proj_2,
-            self.heading_proj_2,
-            self.up_vec_2,
-            self.heading_vec_2,
-            self.vel_loc_2,
-            self.angvel_loc_2,
-            self.roll_2,
-            self.pitch_2,
-            self.yaw_2,
-            self.angle_to_target_2,
-            self.dof_pos_scaled_2,
-            self.prev_potentials_2,
-            self.potentials_2,
-        ) = compute_intermediate_values(
-            self.targets,
-            self.torso_position_2,
-            self.torso_rotation_2,
-            self.velocity_2,
-            self.ang_velocity_2,
-            self.dof_pos_2,
-            self.robots["robot_2"].data.soft_joint_pos_limits[0, :, 0],
-            self.robots["robot_2"].data.soft_joint_pos_limits[0, :, 1],
-            self.inv_start_rot,
-            self.basis_vec0,
-            self.basis_vec1,
-            self.potentials_2,
-            self.prev_potentials_2,
-            self.cfg.sim.dt,
-        )
-    
-    def _compute_intermediate_values_3(self):
-        self.torso_position_3, self.torso_rotation_3 = (
-            self.robots["robot_3"].data.root_link_pos_w,
-            self.robots["robot_3"].data.root_link_quat_w,
-        )
-        self.velocity_3, self.ang_velocity_3 = (
-            self.robots["robot_3"].data.root_com_lin_vel_w,
-            self.robots["robot_3"].data.root_com_ang_vel_w,
-        )
-        self.dof_pos_3, self.dof_vel_3 = self.robots["robot_3"].data.joint_pos, self.robots["robot_3"].data.joint_vel
-
-        (
-            self.up_proj_3,
-            self.heading_proj_3,
-            self.up_vec_3,
-            self.heading_vec_3,
-            self.vel_loc_3,
-            self.angvel_loc_3,
-            self.roll_3,
-            self.pitch_3,
-            self.yaw_3,
-            self.angle_to_target_3,
-            self.dof_pos_scaled_3,
-            self.prev_potentials_3,
-            self.potentials_3,
-        ) = compute_intermediate_values(
-            self.targets,
-            self.torso_position_3,
-            self.torso_rotation_3,
-            self.velocity_3,
-            self.ang_velocity_3,
-            self.dof_pos_3,
-            self.robots["robot_3"].data.soft_joint_pos_limits[0, :, 0],
-            self.robots["robot_3"].data.soft_joint_pos_limits[0, :, 1],
-            self.inv_start_rot,
-            self.basis_vec0,
-            self.basis_vec1,
-            self.potentials_3,
-            self.prev_potentials_3,
+            cur_robot_data["targets"],
+            cur_robot_data["torso_position"],
+            cur_robot_data["torso_rotation"],
+            velocity,
+            ang_velocity,
+            cur_robot_data["dof_pos"],
+            robot.data.soft_joint_pos_limits[0, :, 0],
+            robot.data.soft_joint_pos_limits[0, :, 1],
+            cur_robot_data["inv_start_rot"],
+            cur_robot_data["basis_vec0"],
+            cur_robot_data["basis_vec1"],
+            cur_robot_data["potentials"],
+            cur_robot_data["prev_potentials"],
             self.cfg.sim.dt,
         )
 
@@ -701,66 +579,28 @@ class HeterogeneousMultiAgentTeam(DirectMARLEnv):
             dim=-1,
         )
 
-        robot_id = "robot_1"
-        robot = self.robots[robot_id]
+        for i in range(1, 4):
+            robot_id = f"robot_{i}"
+            robot = self.robots[robot_id]
+            cur_robot_data = self.robot_data[robot_id]
 
-        obs[robot_id] = torch.cat(
+            obs[robot_id] = torch.cat(
             (
-                self.torso_position[:, 2].view(-1, 1),
-                self.vel_loc,
-                self.angvel_loc * self.cfg.angular_velocity_scale,
-                normalize_angle(self.yaw).unsqueeze(-1),
-                normalize_angle(self.roll).unsqueeze(-1),
-                normalize_angle(self.angle_to_target).unsqueeze(-1),
-                self.up_proj.unsqueeze(-1),
-                self.heading_proj.unsqueeze(-1),
-                self.dof_pos_scaled,
-                self.dof_vel * self.cfg.dof_vel_scale,
+                cur_robot_data["torso_position"][:, 2].view(-1, 1),
+                cur_robot_data["vel_loc"],
+                cur_robot_data["angvel_loc"] * self.cfg.angular_velocity_scale,
+                normalize_angle(cur_robot_data["yaw"]).unsqueeze(-1),
+                normalize_angle(cur_robot_data["roll"]).unsqueeze(-1),
+                normalize_angle(cur_robot_data["angle_to_target"]).unsqueeze(-1),
+                cur_robot_data["up_proj"].unsqueeze(-1),
+                cur_robot_data["heading_proj"].unsqueeze(-1),
+                cur_robot_data["dof_pos_scaled"],
+                cur_robot_data["dof_vel"] * self.cfg.dof_vel_scale,
                 self.actions[robot_id],
                 self._commands,
             ),
             dim=-1,
-        )
-        robot_id = "robot_2"
-        robot = self.robots[robot_id]
-
-        obs[robot_id] = torch.cat(
-            (
-                self.torso_position_2[:, 2].view(-1, 1),
-                self.vel_loc_2,
-                self.angvel_loc_2 * self.cfg.angular_velocity_scale,
-                normalize_angle(self.yaw_2).unsqueeze(-1),
-                normalize_angle(self.roll_2).unsqueeze(-1),
-                normalize_angle(self.angle_to_target_2).unsqueeze(-1),
-                self.up_proj_2.unsqueeze(-1),
-                self.heading_proj_2.unsqueeze(-1),
-                self.dof_pos_scaled_2,
-                self.dof_vel_2 * self.cfg.dof_vel_scale,
-                self.actions[robot_id],
-                self._commands,
-            ),
-            dim=-1,
-        )
-        robot_id = "robot_3"
-        robot = self.robots[robot_id]
-        obs[robot_id] = torch.cat(
-            (
-                self.torso_position_3[:, 2].view(-1, 1),        
-                self.vel_loc_3,
-                self.angvel_loc_3 * self.cfg.angular_velocity_scale,
-                normalize_angle(self.yaw_3).unsqueeze(-1),
-                normalize_angle(self.roll_3).unsqueeze(-1),
-                normalize_angle(self.angle_to_target_3).unsqueeze(-1),
-                self.up_proj_3.unsqueeze(-1),
-                self.heading_proj_3.unsqueeze(-1),
-                self.dof_pos_scaled_3,
-                self.dof_vel_3 * self.cfg.dof_vel_scale,
-                self.actions[robot_id],
-                self._commands,
-            ),
-            dim=-1,
-        )
-
+            )
 
 
         # obs = torch.cat(obs, dim=0)
@@ -873,12 +713,13 @@ class HeterogeneousMultiAgentTeam(DirectMARLEnv):
 
     # TODO: Implement a dones function that handles multiple robots
     def _get_dones(self) -> tuple[dict, dict]:
-        self._compute_intermediate_values_1()
-        self._compute_intermediate_values_2()
+        self._compute_intermediate_values(1)
+        self._compute_intermediate_values(2)
+        self._compute_intermediate_values(3)
         time_out = self.episode_length_buf >= self.max_episode_length - 1
-        h1_died = self.torso_position[:, 2] < self.cfg.termination_height
-        h1_died_2 = self.torso_position_2[:, 2] < self.cfg.termination_height
-        h1_died_3 = self.torso_position_3[:, 2] < self.cfg.termination_height
+        h1_died = self.robot_data["robot_1"]["torso_position"][:, 2] < self.cfg.termination_height
+        h1_died_2 = self.robot_data["robot_2"]["torso_position"][:, 2] < self.cfg.termination_height
+        h1_died_3 = self.robot_data["robot_3"]["torso_position"][:, 2] < self.cfg.termination_height
         anymal_fallen = self._get_anymal_fallen()
 
         # dones = torch.logical_or(h1_died, anymal_fallen)
@@ -894,111 +735,78 @@ class HeterogeneousMultiAgentTeam(DirectMARLEnv):
     def _reset_idx(self, env_ids: torch.Tensor | None):
         super()._reset_idx(env_ids)
         object_default_state = self.object.data.default_root_state.clone()[env_ids]
-        object_default_state[:, 0:3] = object_default_state[:, 0:3] + self.scene.env_origins[env_ids]
+        object_default_state[:, 0:3] += self.scene.env_origins[env_ids]
         self.object.write_root_state_to_sim(object_default_state, env_ids)
         self.object.reset(env_ids)
 
-        # Joint position command (deviation from default joint positions)
+        # Reset joint position commands
         for agent, action_space in self.cfg.action_spaces.items():
             self.actions[agent][env_ids] = torch.zeros(env_ids.shape[0], action_space, device=self.device)
             self.previous_actions[agent][env_ids] = torch.zeros(env_ids.shape[0], action_space, device=self.device)
 
         # X/Y linear velocity and yaw angular velocity commands
-        # command = torch.zeros(self.num_envs, 3, device=self.device).uniform_(-1.0, 1.0)
-        # command[:, 2] = 0.0
-        # command[:, 1] = 0.0
-        # command[:, 0] = 1.0
         self._commands[env_ids] = torch.zeros_like(self._commands[env_ids]).uniform_(-1.0, 1.0)
         self._commands[env_ids, 2] = 0.0
-        # reset idx for h1 #
-        if env_ids is None or len(env_ids) == self.num_envs:
-            env_ids = self.robots["robot_1"]._ALL_INDICES
-        self.robots["robot_1"].reset(env_ids)
 
-        joint_pos = self.robots["robot_1"].data.default_joint_pos[env_ids]
-        joint_vel = self.robots["robot_1"].data.default_joint_vel[env_ids]
-        default_root_state = self.robots["robot_1"].data.default_root_state[env_ids]
-        default_root_state[:, :3] += self.scene.env_origins[env_ids]
+        # Reset indexed robots
+        for i in range(1, 4):
+            robot_id = f"robot_{i}"
+            robot_env_ids = env_ids if env_ids is not None else self.robots[robot_id]._ALL_INDICES
+            self.robots[robot_id].reset(robot_env_ids)
 
-        self.robots["robot_1"].write_root_link_pose_to_sim(default_root_state[:, :7], env_ids)
-        self.robots["robot_1"].write_root_com_velocity_to_sim(default_root_state[:, 7:], env_ids)
-        self.robots["robot_1"].write_joint_state_to_sim(joint_pos, joint_vel, None, env_ids)
+            joint_pos = self.robots[robot_id].data.default_joint_pos[robot_env_ids]
+            joint_vel = self.robots[robot_id].data.default_joint_vel[robot_env_ids]
+            default_root_state = self.robots[robot_id].data.default_root_state[robot_env_ids]
+            default_root_state[:, :3] += self.scene.env_origins[robot_env_ids]
 
-        to_target = self.targets[env_ids] - default_root_state[:, :3]
-        to_target[:, 2] = 0.0
-        self.potentials[env_ids] = -torch.norm(to_target, p=2, dim=-1) / self.cfg.sim.dt
+            self.robots[robot_id].write_root_link_pose_to_sim(default_root_state[:, :7], robot_env_ids)
+            self.robots[robot_id].write_root_com_velocity_to_sim(default_root_state[:, 7:], robot_env_ids)
+            self.robots[robot_id].write_joint_state_to_sim(joint_pos, joint_vel, None, robot_env_ids)
 
-        self._compute_intermediate_values_1()
+            # Ensure that robot_data[robot_id]["targets"] exists
+            if robot_id not in self.robot_data or "targets" not in self.robot_data[robot_id]:
+                raise ValueError(f"Missing target data for {robot_id}")
 
-        # update for the second H1 robot
-        if env_ids is None or len(env_ids) == self.num_envs:
-            env_ids = self.robots["robot_2"]._ALL_INDICES
-        self.robots["robot_2"].reset(env_ids)
+            to_target = self.robot_data[robot_id]["targets"][robot_env_ids] - default_root_state[:, :3]
+            to_target[:, 2] = 0.0
+            self.robot_data[robot_id]["potentials"] = -torch.norm(to_target, p=2, dim=-1) / self.cfg.sim.dt
 
-        joint_pos = self.robots["robot_2"].data.default_joint_pos[env_ids]
-        joint_vel = self.robots["robot_2"].data.default_joint_vel[env_ids]
-        default_root_state = self.robots["robot_2"].data.default_root_state[env_ids]
-        default_root_state[:, :3] += self.scene.env_origins[env_ids]
+            # Dynamically call the correct compute function
+            compute_func = getattr(self, f"_compute_intermediate_values", None)
+            if compute_func is not None:
+                compute_func(i)
+            else:
+                raise AttributeError(f"Missing function _compute_intermediate_values_{i}")
 
-        self.robots["robot_2"].write_root_link_pose_to_sim(default_root_state[:, :7], env_ids)
-        self.robots["robot_2"].write_root_com_velocity_to_sim(default_root_state[:, 7:], env_ids)
-        self.robots["robot_2"].write_joint_state_to_sim(joint_pos, joint_vel, None, env_ids)
-
-        to_target_2 = self.targets_2[env_ids] - default_root_state[:, :3]
-        to_target_2[:, 2] = 0.0
-        self.potentials[env_ids] = -torch.norm(to_target_2, p=2, dim=-1) / self.cfg.sim.dt
-        self._compute_intermediate_values_2()
-        # reset idx for h1 #
-        
-                # update for the second H1 robot
-        if env_ids is None or len(env_ids) == self.num_envs:
-            env_ids = self.robots["robot_3"]._ALL_INDICES
-        self.robots["robot_3"].reset(env_ids)
-
-        joint_pos = self.robots["robot_3"].data.default_joint_pos[env_ids]
-        joint_vel = self.robots["robot_3"].data.default_joint_vel[env_ids]
-        default_root_state = self.robots["robot_3"].data.default_root_state[env_ids]
-        default_root_state[:, :3] += self.scene.env_origins[env_ids]
-
-        self.robots["robot_3"].write_root_link_pose_to_sim(default_root_state[:, :7], env_ids)
-        self.robots["robot_3"].write_root_com_velocity_to_sim(default_root_state[:, 7:], env_ids)
-        self.robots["robot_3"].write_joint_state_to_sim(joint_pos, joint_vel, None, env_ids)
-
-        to_target_3 = self.targets_3[env_ids] - default_root_state[:, :3]
-        to_target_3[:, 2] = 0.0
-        self.potentials[env_ids] = -torch.norm(to_target_3, p=2, dim=-1) / self.cfg.sim.dt
-        self._compute_intermediate_values_3()
-
-        # reset idx for anymal #
+        # Reset idx for anymal (robot_0)
         robot = self.robots["robot_0"]
+        robot_env_ids = env_ids if env_ids is not None else robot._ALL_INDICES
+        robot.reset(robot_env_ids)
+
         if env_ids is None or len(env_ids) == self.num_envs:
-            env_ids = robot._ALL_INDICES
-        robot.reset(env_ids)
-        if len(env_ids) == self.num_envs:
-            # Spread out the resets to avoid spikes in training when many environments reset at a similar time
+            # Spread out the resets to avoid spikes in training
             self.episode_length_buf[:] = torch.randint_like(self.episode_length_buf, high=int(self.max_episode_length))
 
         # Reset robot state
-        joint_pos = robot.data.default_joint_pos[env_ids]
-        joint_vel = robot.data.default_joint_vel[env_ids]
-        default_root_state = robot.data.default_root_state[env_ids]
-        default_root_state[:, :3] += self._terrain.env_origins[env_ids]
-        robot.write_root_pose_to_sim(default_root_state[:, :7], env_ids)
-        robot.write_root_velocity_to_sim(default_root_state[:, 7:], env_ids)
-        robot.write_joint_state_to_sim(joint_pos, joint_vel, None, env_ids)
+        joint_pos = robot.data.default_joint_pos[robot_env_ids]
+        joint_vel = robot.data.default_joint_vel[robot_env_ids]
+        default_root_state = robot.data.default_root_state[robot_env_ids]
+        default_root_state[:, :3] += self._terrain.env_origins[robot_env_ids]
+
+        robot.write_root_pose_to_sim(default_root_state[:, :7], robot_env_ids)
+        robot.write_root_velocity_to_sim(default_root_state[:, 7:], robot_env_ids)
+        robot.write_joint_state_to_sim(joint_pos, joint_vel, None, robot_env_ids)
+
         # Logging
         extras = dict()
         for key in self._episode_sums.keys():
-            episodic_sum_avg = torch.mean(self._episode_sums[key][env_ids])
-            extras["Episode_Reward/" + key] = episodic_sum_avg / self.max_episode_length_s
-            self._episode_sums[key][env_ids] = 0.0
+            episodic_sum_avg = torch.mean(self._episode_sums[key][robot_env_ids])
+            extras[f"Episode_Reward/{key}"] = episodic_sum_avg / self.max_episode_length_s
+            self._episode_sums[key][robot_env_ids] = 0.0
+
         self.extras["log"] = dict()
         self.extras["log"].update(extras)
-        extras = dict()
-        # extras["Episode_Termination/base_contact"] = torch.count_nonzero(self.reset_terminated[env_ids]).item()
-        # extras["Episode_Termination/time_out"] = torch.count_nonzero(self.reset_time_outs[env_ids]).item()
-        self.extras["log"].update(extras)
-        # reset idx for anymal #
+
 
 
 @torch.jit.script
