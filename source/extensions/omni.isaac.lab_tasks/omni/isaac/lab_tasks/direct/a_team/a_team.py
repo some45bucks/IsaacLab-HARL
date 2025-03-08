@@ -761,7 +761,25 @@ class HeterogeneousMultiAgentTeam(DirectMARLEnv):
         for i, robot_type in enumerate(self.robot_instance_types):
             robot_id = f"robot_{i}"
             if robot_type == "anymal":
-                pass
+                # Reset idx for anymal 
+                robot = self.robots[robot_id]
+                robot_env_ids = env_ids if env_ids is not None else robot._ALL_INDICES
+                robot.reset(robot_env_ids)
+
+                if env_ids is None or len(env_ids) == self.num_envs:
+                    # Spread out the resets to avoid spikes in training
+                    self.episode_length_buf[:] = torch.randint_like(self.episode_length_buf, high=int(self.max_episode_length))
+
+                # Reset robot state
+                joint_pos = robot.data.default_joint_pos[robot_env_ids]
+                joint_vel = robot.data.default_joint_vel[robot_env_ids]
+                default_root_state = robot.data.default_root_state[robot_env_ids]
+                default_root_state[:, :3] += self._terrain.env_origins[robot_env_ids]
+
+                robot.write_root_pose_to_sim(default_root_state[:, :7], robot_env_ids)
+                robot.write_root_velocity_to_sim(default_root_state[:, 7:], robot_env_ids)
+                robot.write_joint_state_to_sim(joint_pos, joint_vel, None, robot_env_ids)
+
             if robot_type == "h1":
                 robot_env_ids = env_ids if env_ids is not None else self.robots[robot_id]._ALL_INDICES
                 self.robots[robot_id].reset(robot_env_ids)
@@ -785,24 +803,7 @@ class HeterogeneousMultiAgentTeam(DirectMARLEnv):
 
                 self._compute_intermediate_values( i)
 
-        # Reset idx for anymal (robot_0)
-        robot = self.robots["robot_0"]
-        robot_env_ids = env_ids if env_ids is not None else robot._ALL_INDICES
-        robot.reset(robot_env_ids)
 
-        if env_ids is None or len(env_ids) == self.num_envs:
-            # Spread out the resets to avoid spikes in training
-            self.episode_length_buf[:] = torch.randint_like(self.episode_length_buf, high=int(self.max_episode_length))
-
-        # Reset robot state
-        joint_pos = robot.data.default_joint_pos[robot_env_ids]
-        joint_vel = robot.data.default_joint_vel[robot_env_ids]
-        default_root_state = robot.data.default_root_state[robot_env_ids]
-        default_root_state[:, :3] += self._terrain.env_origins[robot_env_ids]
-
-        robot.write_root_pose_to_sim(default_root_state[:, :7], robot_env_ids)
-        robot.write_root_velocity_to_sim(default_root_state[:, 7:], robot_env_ids)
-        robot.write_joint_state_to_sim(joint_pos, joint_vel, None, robot_env_ids)
 
         # Logging
         extras = dict()
