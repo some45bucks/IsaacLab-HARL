@@ -497,14 +497,14 @@ class HeterogeneousMultiAgentTeam(DirectMARLEnv):
             if robot_type == "h1":
                 self.actions[robot_id] = actions[robot_id].clone()
 
-    def _get_anymal_fallen(self):
-        agent_dones = []
+    # def _get_anymal_fallen(self):
+    #     agent_dones = []
 
-        for _, robot in self.robots.items():
-            died = robot.data.body_com_pos_w[:, 0, 2].view(-1) < self.cfg.anymal_min_z_pos
-            agent_dones.append(died)
+    #     for _, robot in self.robots.items():
+    #         died = robot.data.body_com_pos_w[:, 0, 2].view(-1) < self.cfg.anymal_min_z_pos
+    #         agent_dones.append(died)
 
-        return torch.any(torch.stack(agent_dones), dim=0)
+    #     return torch.any(torch.stack(agent_dones), dim=0)
 
     def _apply_action(self):
 
@@ -722,21 +722,21 @@ class HeterogeneousMultiAgentTeam(DirectMARLEnv):
 
     # TODO: Implement a dones function that handles multiple robots
     def _get_dones(self) -> tuple[dict, dict]:
-        self._compute_intermediate_values(1)
-        self._compute_intermediate_values(2)
-        self._compute_intermediate_values(3)
         time_out = self.episode_length_buf >= self.max_episode_length - 1
-        h1_died = self.robot_data["robot_1"]["torso_position"][:, 2] < self.cfg.termination_height
-        h1_died_2 = self.robot_data["robot_2"]["torso_position"][:, 2] < self.cfg.termination_height
-        h1_died_3 = self.robot_data["robot_3"]["torso_position"][:, 2] < self.cfg.termination_height
-        anymal_fallen = self._get_anymal_fallen()
+        dones = torch.zeros_like(time_out)
+        for i, robot_type in enumerate(self.robot_instance_types):
+            robot_id = f"robot_{i}"
+            cur_robot_data = self.robot_data[robot_id]
+            if robot_type == "anymal":
+                robot = self.robots[robot_id]
+                # might need to do this per anymal robot?
+                robots_died = robot.data.body_com_pos_w[:, 0, 2].view(-1) < self.cfg.anymal_min_z_pos
 
-        # dones = torch.logical_or(h1_died, anymal_fallen)
-        # get all dones for all robots if any of the robots are done
-        dones = torch.logical_or(h1_died, h1_died_2)
-        dones = torch.logical_or(dones, h1_died_3)
-        dones = torch.logical_or(dones, anymal_fallen)
-        # dones = anymal_fallen
+            if robot_type == "h1":
+                self._compute_intermediate_values(i)
+                robots_died = cur_robot_data["torso_position"][:, 2] < self.cfg.termination_height
+            # apply logic or
+            dones = torch.logical_or(dones, robots_died)
 
         # return {key:torch.zeros_like(time_out) for key in self.robots.keys()}, {key:torch.zeros_like(dones) for key in self.robots.keys()}
         return {key: time_out for key in self.robots.keys()}, {key: dones for key in self.robots.keys()}
