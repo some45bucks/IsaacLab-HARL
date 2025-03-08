@@ -411,9 +411,9 @@ class HeterogeneousMultiAgentTeam(DirectMARLEnv):
             forces = self.cfg.h1_action_scale * self.robot_data[robot_id]["joint_gears"] * self.actions[robot_id]
             self.robots[robot_id].set_joint_effort_target(forces, joint_ids=self._joint_dof_idx)
         
-            
+        self.robot_instance_types = ["anymal"]+ 3*["h1"]
         self.robot_data = {}
-        for i, robot_type in enumerate(["anymal", "h1", "h1", "h1"]):
+        for i, robot_type in enumerate(self.robot_instance_types):
             robot_id = f"robot_{i}"
             cur_robot_data = {"type": robot_type,"targets": self.scene.env_origins}
 
@@ -486,19 +486,16 @@ class HeterogeneousMultiAgentTeam(DirectMARLEnv):
         # We need to process the actions for each scene independently
         self.processed_actions = copy.deepcopy(actions)
 
-        robot_id = "robot_0"
-        robot_action_space = self.action_spaces[robot_id].shape[0]
-        self.actions[robot_id] = actions[robot_id][:, :robot_action_space].clone()
-        self.processed_actions[robot_id] = (
-            self.cfg.anymal_action_scale * self.actions[robot_id] + self.robots[robot_id].data.default_joint_pos
-        )
-
-        robot_id = "robot_1"
-        self.actions[robot_id] = actions[robot_id].clone()
-        robot_id = "robot_2"
-        self.actions[robot_id] = actions[robot_id].clone()
-        robot_id = "robot_3"
-        self.actions[robot_id] = actions[robot_id].clone()
+        for i, robot_type in enumerate(self.robot_instance_types):
+            robot_id = f"robot_{i}"
+            if robot_type == "anymal":
+                robot_action_space = self.action_spaces[robot_id].shape[0]
+                self.actions[robot_id] = actions[robot_id][:, :robot_action_space].clone()
+                self.processed_actions[robot_id] = (
+                    self.cfg.anymal_action_scale * self.actions[robot_id] + self.robots[robot_id].data.default_joint_pos
+                )
+            if robot_type == "h1":
+                self.actions[robot_id] = actions[robot_id].clone()
 
     def _get_anymal_fallen(self):
         agent_dones = []
