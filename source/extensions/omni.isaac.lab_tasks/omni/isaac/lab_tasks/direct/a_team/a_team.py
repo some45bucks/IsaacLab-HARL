@@ -403,23 +403,46 @@ class HeterogeneousMultiAgentTeam(DirectMARLEnv):
         self.targets = torch.tensor([1000, 0, 0], dtype=torch.float32, device=self.sim.device).repeat(
             (self.num_envs, 1)
         )
+
+        def apply_anymal_action(self, robot_id):
+            self.robots[robot_id].set_joint_position_target(self.processed_actions[robot_id])
+
+        def apply_h1_action(self, robot_id):
+            forces = self.cfg.h1_action_scale * self.robot_data[robot_id]["joint_gears"] * self.actions[robot_id]
+            self.robots[robot_id].set_joint_effort_target(forces, joint_ids=self._joint_dof_idx)
         
+            
         self.robot_data = {}
-        for i in range(4):
+        for i, robot_type in enumerate(["anymal", "h1", "h1", "h1"]):
             robot_id = f"robot_{i}"
-            self.robot_data[robot_id] = {
-            "potentials": torch.zeros(self.num_envs, dtype=torch.float32, device=self.sim.device),
-            "prev_potentials": torch.zeros(self.num_envs, dtype=torch.float32, device=self.sim.device),
-            "targets": torch.tensor([1000, 0, 0], dtype=torch.float32, device=self.sim.device).repeat((self.num_envs, 1)),
-            "joint_gears": torch.tensor(self.cfg.joint_gears, dtype=torch.float32, device=self.sim.device),
-            "heading_vec": torch.tensor([1, 0, 0], dtype=torch.float32, device=self.sim.device).repeat((self.num_envs, 1)),
-            "up_vec": torch.tensor([0, 0, 1], dtype=torch.float32, device=self.sim.device).repeat((self.num_envs, 1)),
-            "start_rotation": torch.tensor([1, 0, 0, 0], device=self.sim.device, dtype=torch.float32),
-            "inv_start_rot": quat_conjugate(torch.tensor([1, 0, 0, 0], device=self.sim.device, dtype=torch.float32)).repeat((self.num_envs, 1)),
-            "basis_vec0": torch.tensor([1, 0, 0], dtype=torch.float32, device=self.sim.device).repeat((self.num_envs, 1)),
-            "basis_vec1": torch.tensor([0, 0, 1], dtype=torch.float32, device=self.sim.device).repeat((self.num_envs, 1)),
-            }
-            self.robot_data[robot_id]["targets"] += self.scene.env_origins
+            cur_robot_data = {"type": robot_type,"targets": self.scene.env_origins}
+
+            if robot_type == "anymal":
+                # cur_robot_data["apply_action"] = apply_anymal_action  # Assign function directly
+                anymal_data = {"apply_action":apply_anymal_action,
+                                "None": None,}
+                cur_robot_data.update(anymal_data)
+
+            if robot_type == "h1":
+                h1_data = {
+                    "apply_action": apply_h1_action,  # Assign function
+                    "potentials": torch.zeros(self.num_envs, dtype=torch.float32, device=self.sim.device),
+                    "prev_potentials": torch.zeros(self.num_envs, dtype=torch.float32, device=self.sim.device),
+                    "targets": torch.tensor([1000, 0, 0], dtype=torch.float32, device=self.sim.device).repeat((self.num_envs, 1)),
+                    "joint_gears": torch.tensor(self.cfg.joint_gears, dtype=torch.float32, device=self.sim.device),
+                    "heading_vec": torch.tensor([1, 0, 0], dtype=torch.float32, device=self.sim.device).repeat((self.num_envs, 1)),
+                    "up_vec": torch.tensor([0, 0, 1], dtype=torch.float32, device=self.sim.device).repeat((self.num_envs, 1)),
+                    "start_rotation": torch.tensor([1, 0, 0, 0], device=self.sim.device, dtype=torch.float32),
+                    "inv_start_rot": quat_conjugate(torch.tensor([1, 0, 0, 0], device=self.sim.device, dtype=torch.float32)).repeat((self.num_envs, 1)),
+                    "basis_vec0": torch.tensor([1, 0, 0], dtype=torch.float32, device=self.sim.device).repeat((self.num_envs, 1)),
+                    "basis_vec1": torch.tensor([0, 0, 1], dtype=torch.float32, device=self.sim.device).repeat((self.num_envs, 1)),
+                }
+
+                # Explicitly update key-by-key instead of using `update()`
+                cur_robot_data.update(h1_data)
+
+
+            self.robot_data[robot_id] = cur_robot_data 
 
 
     def _setup_scene(self):
@@ -488,20 +511,11 @@ class HeterogeneousMultiAgentTeam(DirectMARLEnv):
 
     def _apply_action(self):
 
-        robot_id = "robot_0"
-        self.robots[robot_id].set_joint_position_target(self.processed_actions[robot_id])
+        for i in range(self.num_robots):
+            robot_id = f"robot_{i}"
+            self.robot_data[robot_id]["apply_action"](self, robot_id)
 
-        robot_id = "robot_1"
-        forces = self.cfg.h1_action_scale * self.robot_data[robot_id]["joint_gears"] * self.actions[robot_id]
-        self.robots[robot_id].set_joint_effort_target(forces, joint_ids=self._joint_dof_idx)
 
-        robot_id = "robot_2"
-        forces = self.cfg.h1_action_scale * self.robot_data[robot_id]["joint_gears"] * self.actions[robot_id]
-        self.robots[robot_id].set_joint_effort_target(forces, joint_ids=self._joint_dof_idx)
-
-        robot_id = "robot_3"
-        forces = self.cfg.h1_action_scale * self.robot_data[robot_id]["joint_gears"] * self.actions[robot_id]
-        self.robots[robot_id].set_joint_effort_target(forces, joint_ids=self._joint_dof_idx)
 
     def _compute_intermediate_values(self, robot_idx: int):
         robot_id = f"robot_{robot_idx}"
@@ -511,6 +525,8 @@ class HeterogeneousMultiAgentTeam(DirectMARLEnv):
         cur_robot_data["torso_position"], cur_robot_data["torso_rotation"] = robot.data.root_link_pos_w, robot.data.root_link_quat_w
         velocity, ang_velocity = robot.data.root_com_lin_vel_w, robot.data.root_com_ang_vel_w
         cur_robot_data["dof_pos"], cur_robot_data["dof_vel"] = robot.data.joint_pos, robot.data.joint_vel
+
+        inv_start_rot = torch.tensor(list(cur_robot_data["inv_start_rot"]), device=self.device) if isinstance(cur_robot_data["inv_start_rot"], tuple) else cur_robot_data["inv_start_rot"]
 
         (
             cur_robot_data["up_proj"],
