@@ -539,7 +539,7 @@ class HeterogeneousMultiAgentTeam(DirectMARLEnv):
             cur_robot_data["basis_vec0"],
             cur_robot_data["basis_vec1"],
             cur_robot_data["potentials"],
-            cur_robot_data["prev_potentials"],
+            cur_robot_data["prev_potentials"].resize_as_(cur_robot_data["potentials"]),
             self.cfg.sim.dt,
         )
 
