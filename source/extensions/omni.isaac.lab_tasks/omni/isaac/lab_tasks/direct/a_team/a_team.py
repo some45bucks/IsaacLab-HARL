@@ -32,7 +32,7 @@ from omni.isaac.lab.utils.math import quat_from_angle_axis
 # Pre-defined configs
 ##
 from omni.isaac.lab_assets.anymal import ANYMAL_C_CFG  # isort: skip
-from omni.isaac.lab_assets.unitree import H1_CFG  # isort: skip
+from omni.isaac.lab_assets.unitree import H1_CFG as H1_CFG  # isort: skip
 from omni.isaac.lab.terrains.config.rough import ROUGH_TERRAINS_CFG  # isort: skip
 
 
@@ -113,17 +113,22 @@ class EventCfg:
 @configclass
 class HeterogeneousMultiAgentFlatEnvCfg(DirectMARLEnvCfg):
     # env
+    robot_instance_types = (
+        [("anymal", {"observation_space": 48, "action_space": 12})] * 1 + 
+        [( "h1", {"observation_space": 72, "action_space": 19})] * 3
+    )
+
     episode_length_s = 20.0
     decimation = 4
     anymal_action_scale = 0.5
     action_space = 12
-    action_spaces = {"robot_0": 12, "robot_1": 19, "robot_2": 19, "robot_3": 19}
+    action_spaces = {f"robot_{i}": robot_type["action_space"] for i, (_, robot_type) in enumerate(robot_instance_types)}
 
-    observation_spaces = {"robot_0": 48, "robot_1": 72, "robot_2": 72, "robot_3": 72}
+    observation_spaces = {f"robot_{i}": robot_type["observation_space"] for i, (_, robot_type) in enumerate(robot_instance_types)}
     state_space = 0
-    possible_agents = ["robot_0", "robot_1", "robot_2", "robot_3"]
-    state_spaces = {f"robot_{i}": 0 for i in range(len(possible_agents))}
-
+    possible_agents = [f"robot_{i}" for i in range(len(robot_instance_types))]
+    state_spaces = {f"robot_{i}": 0 for i in range(len(robot_instance_types))}
+    
     for agets in possible_agents:
         print(agets)
 
@@ -160,26 +165,30 @@ class HeterogeneousMultiAgentFlatEnvCfg(DirectMARLEnvCfg):
     # events
     events: EventCfg = EventCfg()
 
-    # robot
-    robot_0: ArticulationCfg = ANYMAL_C_CFG.replace(prim_path="/World/envs/env_.*/Robot_0")
-    contact_sensor_0: ContactSensorCfg = ContactSensorCfg(
-        prim_path="/World/envs/env_.*/Robot_0/.*", history_length=3, update_period=0.005, track_air_time=True
-    )
-    robot_0.init_state.rot = (1.0, 0.0, 0.0, 1)
-    robot_0.init_state.pos = (-1.0, 0.0, 0.5)
+    # robot instances
+    robot_instances = {}
 
-    robot_1: ArticulationCfg = H1_CFG.replace(prim_path="/World/envs/env_.*/Robot_1")
-    robot_1.init_state.rot = (1.0, 0.0, 0.0, 1)
-    robot_1.init_state.pos = (1.0, 0.0, 1.0)
-    
-    robot_2: ArticulationCfg = H1_CFG.replace(prim_path="/World/envs/env_.*/Robot_2")
-    robot_2.init_state.rot = (1.0, 0.0, 0.0, 1)
-    robot_2.init_state.pos = (2.0, 0.0, 1)
+    for i, (robot_type, _ ) in enumerate(robot_instance_types):
+        robot_id = f"robot_{i}"
+        prim_path = f"/World/envs/env_.*/{robot_id.title()}"
 
-    robot_3: ArticulationCfg = H1_CFG.replace(prim_path="/World/envs/env_.*/Robot_3")
-    robot_3.init_state.rot = (1.0, 0.0, 0.0, 1)
-    robot_3.init_state.pos = (3.0, 0.0, 1)
-    # # rec prism
+        if i == 0:
+            # Robot 0 uses a different configuration
+            robot_instances[robot_id] = ANYMAL_C_CFG.replace(prim_path=prim_path)
+            robot_instances[robot_id].init_state.rot = (1.0, 0.0, 0.0, 1)
+            robot_instances[robot_id].init_state.pos = (-i* 1.0, 0.0, 0.5)
+        else:
+            # Other robots use H1_CFG
+            robot_instances[robot_id] = H1_CFG.replace(prim_path=prim_path)
+            robot_instances[robot_id].init_state.rot = (1.0, 0.0, 0.0, 1)
+            robot_instances[robot_id].init_state.pos = (i * 1.0, 0.0, 1.0)
+
+    # Assign robots dynamically to class attributes
+    locals().update(robot_instances)
+
+
+
+
     # cfg_rec_prism= RigidObjectCfg(
     #     prim_path="/World/envs/env_.*/Object",
     #     spawn=sim_utils.CuboidCfg(
@@ -411,9 +420,8 @@ class HeterogeneousMultiAgentTeam(DirectMARLEnv):
             forces = self.cfg.h1_action_scale * self.robot_data[robot_id]["joint_gears"] * self.actions[robot_id]
             self.robots[robot_id].set_joint_effort_target(forces, joint_ids=self._joint_dof_idx)
         
-        self.robot_instance_types = ["anymal"]+ 3*["h1"]
         self.robot_data = {}
-        for i, robot_type in enumerate(self.robot_instance_types):
+        for i, (robot_type, _ ) in enumerate(cfg.robot_instance_types):
             robot_id = f"robot_{i}"
             cur_robot_data = {"type": robot_type,"targets": self.scene.env_origins}
 
@@ -446,7 +454,7 @@ class HeterogeneousMultiAgentTeam(DirectMARLEnv):
 
 
     def _setup_scene(self):
-        self.num_robots = sum(1 for key in self.cfg.__dict__.keys() if "robot_" in key)
+        # self.num_robots = sum(1 for key in self.cfg.__dict__.keys() if key.startswith("robot_"))
         self.robots = {}
         self.contact_sensors = {}
         self.height_scanners = {}
@@ -455,7 +463,7 @@ class HeterogeneousMultiAgentTeam(DirectMARLEnv):
 
         self.scene.rigid_objects["object"] = self.object
 
-        for i in range(self.num_robots):
+        for i, (robot_type, _ ) in enumerate(self.cfg.robot_instance_types):
             robot_id = f"robot_{i}"
             if robot_id in self.cfg.__dict__:
                 self.robots[f"robot_{i}"] = Articulation(self.cfg.__dict__["robot_" + str(i)])
@@ -486,7 +494,7 @@ class HeterogeneousMultiAgentTeam(DirectMARLEnv):
         # We need to process the actions for each scene independently
         self.processed_actions = copy.deepcopy(actions)
 
-        for i, robot_type in enumerate(self.robot_instance_types):
+        for i, (robot_type, _ ) in enumerate(self.cfg.robot_instance_types):
             robot_id = f"robot_{i}"
             if robot_type == "anymal":
                 robot_action_space = self.action_spaces[robot_id].shape[0]
@@ -508,7 +516,7 @@ class HeterogeneousMultiAgentTeam(DirectMARLEnv):
 
     def _apply_action(self):
 
-        for i in range(self.num_robots):
+        for i, (robot_type, _ ) in enumerate(self.cfg.robot_instance_types):
             robot_id = f"robot_{i}"
             self.robot_data[robot_id]["apply_action"](self, robot_id)
 
@@ -569,7 +577,7 @@ class HeterogeneousMultiAgentTeam(DirectMARLEnv):
         #         height_datas[robot_id] = (height_data)
 
         obs = {}
-        for i, robot_type in enumerate(self.robot_instance_types):
+        for i, (robot_type, _ ) in enumerate(self.cfg.robot_instance_types):
             robot_id = f"robot_{i}"
             robot = self.robots[robot_id]
             cur_robot_data = self.robot_data[robot_id]
@@ -724,7 +732,7 @@ class HeterogeneousMultiAgentTeam(DirectMARLEnv):
     def _get_dones(self) -> tuple[dict, dict]:
         time_out = self.episode_length_buf >= self.max_episode_length - 1
         dones = torch.zeros_like(time_out)
-        for i, robot_type in enumerate(self.robot_instance_types):
+        for i, (robot_type, _ ) in enumerate(self.cfg.robot_instance_types):
             robot_id = f"robot_{i}"
             cur_robot_data = self.robot_data[robot_id]
             if robot_type == "anymal":
@@ -758,7 +766,7 @@ class HeterogeneousMultiAgentTeam(DirectMARLEnv):
         self._commands[env_ids, 2] = 0.0
 
         # Reset indexed robots
-        for i, robot_type in enumerate(self.robot_instance_types):
+        for i, (robot_type, _ ) in enumerate(self.cfg.robot_instance_types):
             robot_id = f"robot_{i}"
             if robot_type == "anymal":
                 # Reset idx for anymal 
