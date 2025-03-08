@@ -569,51 +569,47 @@ class HeterogeneousMultiAgentTeam(DirectMARLEnv):
         #         height_datas[robot_id] = (height_data)
 
         obs = {}
-
-        robot_id = "robot_0"
-        robot = self.robots[robot_id]
-        # anymal_commands = torch.stack([self._commands[:, 1], -self._commands[:, 0], self._commands[:, 2]]).t()
-        obs[robot_id] = torch.cat(
-            [
-                tensor
-                for tensor in (
-                    robot.data.root_com_lin_vel_b,
-                    robot.data.root_com_ang_vel_b,
-                    robot.data.projected_gravity_b,
-                    # anymal_commands,
-                    self._commands,
-                    robot.data.joint_pos - robot.data.default_joint_pos,
-                    robot.data.joint_vel,
-                    None,
-                    self.actions[robot_id],
-                )
-                if tensor is not None
-            ],
-            dim=-1,
-        )
-
-        for i in range(1, 4):
+        for i, robot_type in enumerate(self.robot_instance_types):
             robot_id = f"robot_{i}"
             robot = self.robots[robot_id]
             cur_robot_data = self.robot_data[robot_id]
-
-            obs[robot_id] = torch.cat(
-            (
-                cur_robot_data["torso_position"][:, 2].view(-1, 1),
-                cur_robot_data["vel_loc"],
-                cur_robot_data["angvel_loc"] * self.cfg.angular_velocity_scale,
-                normalize_angle(cur_robot_data["yaw"]).unsqueeze(-1),
-                normalize_angle(cur_robot_data["roll"]).unsqueeze(-1),
-                normalize_angle(cur_robot_data["angle_to_target"]).unsqueeze(-1),
-                cur_robot_data["up_proj"].unsqueeze(-1),
-                cur_robot_data["heading_proj"].unsqueeze(-1),
-                cur_robot_data["dof_pos_scaled"],
-                cur_robot_data["dof_vel"] * self.cfg.dof_vel_scale,
-                self.actions[robot_id],
-                self._commands,
-            ),
-            dim=-1,
-            )
+            if robot_type == "anymal":
+                obs[robot_id] = torch.cat(
+                    [
+                        tensor
+                        for tensor in (
+                            robot.data.root_com_lin_vel_b,
+                            robot.data.root_com_ang_vel_b,
+                            robot.data.projected_gravity_b,
+                            # anymal_commands,
+                            self._commands,
+                            robot.data.joint_pos - robot.data.default_joint_pos,
+                            robot.data.joint_vel,
+                            None,
+                            self.actions[robot_id],
+                        )
+                        if tensor is not None
+                    ],
+                    dim=-1,
+                )
+            if robot_type == "h1":
+                obs[robot_id] = torch.cat(
+                (
+                    cur_robot_data["torso_position"][:, 2].view(-1, 1),
+                    cur_robot_data["vel_loc"],
+                    cur_robot_data["angvel_loc"] * self.cfg.angular_velocity_scale,
+                    normalize_angle(cur_robot_data["yaw"]).unsqueeze(-1),
+                    normalize_angle(cur_robot_data["roll"]).unsqueeze(-1),
+                    normalize_angle(cur_robot_data["angle_to_target"]).unsqueeze(-1),
+                    cur_robot_data["up_proj"].unsqueeze(-1),
+                    cur_robot_data["heading_proj"].unsqueeze(-1),
+                    cur_robot_data["dof_pos_scaled"],
+                    cur_robot_data["dof_vel"] * self.cfg.dof_vel_scale,
+                    self.actions[robot_id],
+                    self._commands,
+                ),
+                dim=-1,
+                )
 
 
         # obs = torch.cat(obs, dim=0)
@@ -762,34 +758,32 @@ class HeterogeneousMultiAgentTeam(DirectMARLEnv):
         self._commands[env_ids, 2] = 0.0
 
         # Reset indexed robots
-        for i in range(1, 4):
+        for i, robot_type in enumerate(self.robot_instance_types):
             robot_id = f"robot_{i}"
-            robot_env_ids = env_ids if env_ids is not None else self.robots[robot_id]._ALL_INDICES
-            self.robots[robot_id].reset(robot_env_ids)
+            if robot_type == "anymal":
+                pass
+            if robot_type == "h1":
+                robot_env_ids = env_ids if env_ids is not None else self.robots[robot_id]._ALL_INDICES
+                self.robots[robot_id].reset(robot_env_ids)
 
-            joint_pos = self.robots[robot_id].data.default_joint_pos[robot_env_ids]
-            joint_vel = self.robots[robot_id].data.default_joint_vel[robot_env_ids]
-            default_root_state = self.robots[robot_id].data.default_root_state[robot_env_ids]
-            default_root_state[:, :3] += self.scene.env_origins[robot_env_ids]
+                joint_pos = self.robots[robot_id].data.default_joint_pos[robot_env_ids]
+                joint_vel = self.robots[robot_id].data.default_joint_vel[robot_env_ids]
+                default_root_state = self.robots[robot_id].data.default_root_state[robot_env_ids]
+                default_root_state[:, :3] += self.scene.env_origins[robot_env_ids]
 
-            self.robots[robot_id].write_root_link_pose_to_sim(default_root_state[:, :7], robot_env_ids)
-            self.robots[robot_id].write_root_com_velocity_to_sim(default_root_state[:, 7:], robot_env_ids)
-            self.robots[robot_id].write_joint_state_to_sim(joint_pos, joint_vel, None, robot_env_ids)
+                self.robots[robot_id].write_root_link_pose_to_sim(default_root_state[:, :7], robot_env_ids)
+                self.robots[robot_id].write_root_com_velocity_to_sim(default_root_state[:, 7:], robot_env_ids)
+                self.robots[robot_id].write_joint_state_to_sim(joint_pos, joint_vel, None, robot_env_ids)
 
-            # Ensure that robot_data[robot_id]["targets"] exists
-            if robot_id not in self.robot_data or "targets" not in self.robot_data[robot_id]:
-                raise ValueError(f"Missing target data for {robot_id}")
+                # Ensure that robot_data[robot_id]["targets"] exists
+                if robot_id not in self.robot_data or "targets" not in self.robot_data[robot_id]:
+                    raise ValueError(f"Missing target data for {robot_id}")
 
-            to_target = self.robot_data[robot_id]["targets"][robot_env_ids] - default_root_state[:, :3]
-            to_target[:, 2] = 0.0
-            self.robot_data[robot_id]["potentials"] = -torch.norm(to_target, p=2, dim=-1) / self.cfg.sim.dt
+                to_target = self.robot_data[robot_id]["targets"][robot_env_ids] - default_root_state[:, :3]
+                to_target[:, 2] = 0.0
+                self.robot_data[robot_id]["potentials"] = -torch.norm(to_target, p=2, dim=-1) / self.cfg.sim.dt
 
-            # Dynamically call the correct compute function
-            compute_func = getattr(self, f"_compute_intermediate_values", None)
-            if compute_func is not None:
-                compute_func(i)
-            else:
-                raise AttributeError(f"Missing function _compute_intermediate_values_{i}")
+                self._compute_intermediate_values( i)
 
         # Reset idx for anymal (robot_0)
         robot = self.robots["robot_0"]
