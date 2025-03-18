@@ -9,6 +9,7 @@ import argparse
 import numpy as np
 import sys
 import threading
+import time
 import torch
 
 from pynput.keyboard import Key, Listener
@@ -64,16 +65,17 @@ agent_cfg_entry_point = "harl_ppo_cfg_entry_point"
 
 @hydra_task_config(args_cli.task, agent_cfg_entry_point)
 def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agent_cfg: dict):
+    keys_pressed = {}
     move_command = "stay_still"
-
+    dt = 0.1
     movements = dict(
-        rotate_left=torch.tensor([0, 0, 1]),
-        rotate_right=torch.tensor([0, 0, -1]),
-        move_left=torch.tensor([0, 1, 0]),
-        move_right=torch.tensor([0, -1, 0]),
-        move_forward=torch.tensor([1, 0, 0]),
-        move_backward=torch.tensor([-1, 0, 0]),
-        stay_still=torch.tensor([0, 0, 0]),
+        rotate_left=torch.tensor([0.0, 0.0, 1.0]),
+        rotate_right=torch.tensor([0.0, 0.0, -1.0]),
+        move_left=torch.tensor([0.0, 1.0, 0.0]),
+        move_right=torch.tensor([0.0, -1.0, 0.0]),
+        move_forward=torch.tensor([1.0, 0.0, 0.0]),
+        move_backward=torch.tensor([-1.0, 0.0, 0.0]),
+        stay_still=torch.tensor([0.0, 0.0, 0.0]),
     )
     move_vector = movements[move_command]
 
@@ -81,43 +83,87 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
         nonlocal move_command
         nonlocal movements
         nonlocal move_vector
+        nonlocal keys_pressed
 
-        if key == Key.up:
-            move_vector += movements["move_forward"]
-        elif key == Key.left:
-            move_vector += movements["move_left"]
-        elif key == Key.right:
-            move_vector += movements["move_right"]
-        elif key == Key.down:
-            move_vector += movements["move_backward"]
-        elif hasattr(key, "char"):
-            if key.char == "a":
-                move_vector += movements["rotate_left"]
-            elif key.char == "d":
-                move_vector += movements["rotate_right"]
+        if hasattr(key, "char"):
+            key = key.char
 
-        move_vector = torch.clip(move_vector, -1, 1)
+        keys_pressed[key] = True
+
+        # if key == Key.up:
+        #     move_vector += movements["move_forward"]
+        # elif key == Key.left:
+        #     move_vector += movements["move_left"]
+        # elif key == Key.right:
+        #     move_vector += movements["move_right"]
+        # elif key == Key.down:
+        #     move_vector += movements["move_backward"]
+        # elif hasattr(key, "char"):
+        #     if key.char == "a":
+        #         move_vector += movements["rotate_left"]
+        #     elif key.char == "d":
+        #         move_vector += movements["rotate_right"]
+
+        # move_vector = torch.clip(move_vector, -1, 1)
 
     def set_to_no_move(key):
         nonlocal move_command
         nonlocal movements
         nonlocal move_vector
+        nonlocal keys_pressed
 
-        if key == Key.up:
-            move_vector -= movements["move_forward"]
-        elif key == Key.left:
-            move_vector -= movements["move_left"]
-        elif key == Key.right:
-            move_vector -= movements["move_right"]
-        elif key == Key.down:
-            move_vector -= movements["move_backward"]
-        elif hasattr(key, "char"):
-            if key.char == "a":
-                move_vector -= movements["rotate_left"]
-            elif key.char == "d":
-                move_vector -= movements["rotate_right"]
+        if hasattr(key, "char"):
+            key = key.char
 
-        move_vector = torch.clip(move_vector, -1, 1)
+        keys_pressed[key] = False
+
+        # if key == Key.up:
+        #     move_vector -= movements["move_forward"]
+        # elif key == Key.left:
+        #     move_vector -= movements["move_left"]
+        # elif key == Key.right:
+        #     move_vector -= movements["move_right"]
+        # elif key == Key.down:
+        #     move_vector -= movements["move_backward"]
+        # elif hasattr(key, "char"):
+        #     if key.char == "a":
+        #         move_vector -= movements["rotate_left"]
+        #     elif key.char == "d":
+        #         move_vector -= movements["rotate_right"]
+
+        # move_vector = torch.clip(move_vector, -1, 1)
+
+    def check_keys_held():
+        nonlocal move_command
+        nonlocal movements
+        nonlocal move_vector
+        nonlocal keys_pressed
+        nonlocal dt
+
+        while True:
+            before_vector = move_vector.clone()
+
+            for key, down in keys_pressed.items():
+                if key == Key.up and down:
+                    move_vector += movements["move_forward"] * dt
+                if key == Key.left and down:
+                    move_vector += movements["move_left"] * dt
+                if key == Key.right and down:
+                    move_vector += movements["move_right"] * dt
+                if key == Key.down and down:
+                    move_vector += movements["move_backward"] * dt
+                if key == "a" and down:
+                    move_vector += movements["rotate_left"] * dt
+                if key == "d" and down:
+                    move_vector += movements["rotate_right"] * dt
+
+            move_vector[move_vector == before_vector] -= move_vector[move_vector == before_vector] * dt
+
+            move_vector = torch.clip(move_vector, -0.5, 0.5)
+            time.sleep(dt)
+
+    check_thread = threading.Thread(target=check_keys_held, daemon=True)
+    check_thread.start()
 
     listener = Listener(on_press=parse_input, on_release=set_to_no_move)
     listener_thread = threading.Thread(target=listener.start, daemon=True)
@@ -183,6 +229,7 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
                 rnn_states[:, agent_id, :] = rnn_state.cpu().numpy()
 
             runner.env.unwrapped._commands[:, :] = move_vector
+            # runner.env.unwrapped._commands[:, :] = movements["move_forward"]
 
             obs, _, rewards, dones, _, _ = runner.env.step(actions)
 

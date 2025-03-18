@@ -118,7 +118,7 @@ class HeterogeneousMultiAgentFlatSurfEnvCfg(DirectMARLEnvCfg):
     action_space = 12
     action_spaces = {"robot_0": 12, "robot_1": 12, "robot_2": 19}
 
-    observation_spaces = {"robot_0": 48, "robot_1": 48, "robot_2": 72}
+    observation_spaces = {"robot_0": 48 + 18, "robot_1": 48 + 18, "robot_2": 72 + 18}
     state_space = 0
     state_spaces = {f"robot_{i}": 0 for i in range(3)}
     possible_agents = ["robot_0", "robot_1", "robot_2"]
@@ -134,6 +134,9 @@ class HeterogeneousMultiAgentFlatSurfEnvCfg(DirectMARLEnvCfg):
             static_friction=1.0,
             dynamic_friction=1.0,
             restitution=0.0,
+        ),
+        physx=sim_utils.PhysxCfg(
+            enable_ccd=True,
         ),
     )
     terrain = TerrainImporterCfg(
@@ -185,7 +188,7 @@ class HeterogeneousMultiAgentFlatSurfEnvCfg(DirectMARLEnvCfg):
             collision_props=sim_utils.CollisionPropertiesCfg(),
             visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(1, 0.65, 0)),
         ),
-        init_state=RigidObjectCfg.InitialStateCfg(pos=(0.0, 0, 0.6), rot=(1.0, 0.0, 0.0, 0.0)),  # started the bar lower
+        init_state=RigidObjectCfg.InitialStateCfg(pos=(0.0, 0, 0.6), rot=(1.0, 0.0, 0.0, 0.0)),
     )
 
     # reward scales (override from flat config)
@@ -209,6 +212,7 @@ class HeterogeneousMultiAgentFlatSurfEnvCfg(DirectMARLEnvCfg):
     termination_height: float = 0.8
     anymal_min_z_pos = 0.3
     h1_min_z_pos = 1.0
+    command_scale = 0.5
 
     joint_gears: list = [
         50.0,  # left_hip_yaw
@@ -338,6 +342,7 @@ class HeterogeneousMultiAgentSurf(DirectMARLEnv):
         self.base_bodies = ["base", "base", "pelvis"]
         # X/Y linear velocity and yaw angular velocity commands
         self._commands = torch.zeros(self.num_envs, 3, device=self.device)
+        self._halfway_switch_ready = torch.ones(self.num_envs, dtype=torch.bool, device=self.device)
         self._joint_dof_idx, _ = self.robots["robot_2"].find_joints(".*")
 
         # Logging
@@ -546,6 +551,10 @@ class HeterogeneousMultiAgentSurf(DirectMARLEnv):
                     robot.data.joint_vel,
                     None,
                     self.actions[robot_id],
+                    self.robots["robot_1"].data.root_com_lin_vel_b,
+                    self.robots["robot_1"].data.root_com_ang_vel_b,
+                    self.object.data.root_com_lin_vel_b,
+                    self.object.data.root_com_ang_vel_b,
                 )
                 if tensor is not None
             ],
@@ -566,6 +575,10 @@ class HeterogeneousMultiAgentSurf(DirectMARLEnv):
                     robot.data.joint_vel,
                     None,
                     self.actions[robot_id],
+                    self.robots["robot_0"].data.root_com_lin_vel_b,
+                    self.robots["robot_0"].data.root_com_ang_vel_b,
+                    self.object.data.root_com_lin_vel_b,
+                    self.object.data.root_com_ang_vel_b,
                 )
                 if tensor is not None
             ],
@@ -588,6 +601,12 @@ class HeterogeneousMultiAgentSurf(DirectMARLEnv):
                 self.dof_vel * self.cfg.dof_vel_scale,
                 self.actions[robot_id],
                 self._commands,
+                self.robots["robot_0"].data.root_com_lin_vel_b,
+                self.robots["robot_0"].data.root_com_ang_vel_b,
+                self.robots["robot_1"].data.root_com_lin_vel_b,
+                self.robots["robot_1"].data.root_com_ang_vel_b,
+                self.object.data.root_com_lin_vel_b,
+                self.object.data.root_com_ang_vel_b,
             ),
             dim=-1,
         )
@@ -654,9 +673,9 @@ class HeterogeneousMultiAgentSurf(DirectMARLEnv):
         anymal_1_vel = self.robots["robot_0"].data.root_com_lin_vel_b
         anymal_2_vel = self.robots["robot_1"].data.root_com_lin_vel_b
         h1_vel = self.robots["robot_2"].data.root_com_lin_vel_b
-        obj_vel = self.object.data.root_com_lin_vel_b
+        # obj_vel = self.object.data.root_com_lin_vel_b
 
-        all_vectors = torch.stack([anymal_1_vel, anymal_2_vel, h1_vel, obj_vel])
+        all_vectors = torch.stack([anymal_1_vel, anymal_2_vel, h1_vel])
         mean_vel = torch.mean(all_vectors, dim=0)
         mean_vel[:, 2] = 0
 
@@ -671,20 +690,21 @@ class HeterogeneousMultiAgentSurf(DirectMARLEnv):
     def _get_rewards(self) -> dict:
         reward = {}
 
-        bar_commands = torch.stack([-self._commands[:, 1], self._commands[:, 0], self._commands[:, 2]]).t()
-        self._draw_markers(bar_commands)
+        bar_commands = torch.stack([self._commands[:, 0], self._commands[:, 1], self._commands[:, 2]]).t()
 
         anymal_1_vel = self.robots["robot_0"].data.root_com_lin_vel_b[:, :2]
         anymal_2_vel = self.robots["robot_1"].data.root_com_lin_vel_b[:, :2]
         h1_vel = self.robots["robot_2"].data.root_com_lin_vel_b[:, :2]
-        obj_vel = self.object.data.root_com_lin_vel_b[:, :2]
+        # obj_vel = self.object.data.root_com_lin_vel_b[:, :2]
 
-        all_vectors = torch.stack([anymal_1_vel, anymal_2_vel, h1_vel, obj_vel])
+        all_vectors = torch.stack([anymal_1_vel, anymal_2_vel, h1_vel])
         mean_vel = torch.mean(all_vectors, dim=0)
+
+        self._draw_markers(bar_commands)
 
         for robot_id, _ in self.robots.items():
             # linear velocity tracking
-            lin_vel_error = torch.sum(torch.square(bar_commands[:, :2] - mean_vel), dim=1)  # changing this to the bar
+            lin_vel_error = torch.sum(torch.square(bar_commands[:, :2] - mean_vel), dim=1)
             lin_vel_error_mapped = torch.exp(-lin_vel_error)
 
             rewards = {
@@ -717,6 +737,17 @@ class HeterogeneousMultiAgentSurf(DirectMARLEnv):
 
         dones = torch.logical_or(h1_died, anymal_fallen)
 
+        half_time_out = self.episode_length_buf >= (self.max_episode_length - 1) // 2
+
+        half_way_switch_bool = torch.logical_and(half_time_out, self._halfway_switch_ready)
+
+        self._commands[half_way_switch_bool] = self.cfg.command_scale * torch.zeros_like(
+            self._commands[half_way_switch_bool]
+        ).uniform_(-1.0, 1.0)
+        self._commands[half_way_switch_bool, 2] = 0.0
+
+        self._halfway_switch_ready[half_time_out] = torch.zeros_like(self._halfway_switch_ready[half_time_out])
+
         # dones = anymal_fallen
 
         # return {key:torch.zeros_like(time_out) for key in self.robots.keys()}, {key:torch.zeros_like(dones) for key in self.robots.keys()}
@@ -739,8 +770,10 @@ class HeterogeneousMultiAgentSurf(DirectMARLEnv):
         # command[:, 2] = 0.0
         # command[:, 1] = 0.0
         # command[:, 0] = 1.0
-        self._commands[env_ids] = torch.zeros_like(self._commands[env_ids]).uniform_(-1.0, 1.0)
+        self._commands[env_ids] = self.cfg.command_scale * torch.zeros_like(self._commands[env_ids]).uniform_(-1.0, 1.0)
         self._commands[env_ids, 2] = 0.0
+
+        self._halfway_switch_ready[env_ids] = 1.0
 
         # reset idx for h1 #
         if env_ids is None or len(env_ids) == self.num_envs:
