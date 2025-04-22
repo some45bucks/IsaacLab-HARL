@@ -6,7 +6,8 @@
 """Train an algorithm."""
 
 import argparse
-import numpy as np
+
+# import numpy as np
 import sys
 import threading
 import time
@@ -60,7 +61,8 @@ from omni.isaac.lab.envs import DirectMARLEnvCfg, DirectRLEnvCfg, ManagerBasedRL
 import omni.isaac.lab_tasks  # noqa: F401
 from omni.isaac.lab_tasks.utils.hydra import hydra_task_config
 
-agent_cfg_entry_point = "harl_ppo_cfg_entry_point"
+algorithm = args_cli.algorithm.lower()
+agent_cfg_entry_point = f"harl_{algorithm}_cfg_entry_point"
 
 
 @hydra_task_config(args_cli.task, agent_cfg_entry_point)
@@ -199,23 +201,21 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
         if obs_space.shape[0] > max_action_space:
             max_action_space = obs_space.shape[0]
 
-    actions = np.zeros((args["num_envs"], runner.num_agents, max_action_space), dtype=np.float64)
-    rnn_states = np.zeros(
+    actions = torch.zeros((args["num_envs"], runner.num_agents, max_action_space), dtype=torch.float64, device="cuda:0")
+    rnn_states = torch.zeros(
         (
             args["num_envs"],
             runner.num_agents,
             runner.recurrent_n,
             runner.rnn_hidden_size,
         ),
-        dtype=np.float64,
+        dtype=torch.float64,
+        device="cuda:0",
     )
-    masks = np.ones(
-        (args["num_envs"], runner.num_agents, 1),
-        dtype=np.float64,
-    )
+    masks = torch.ones((args["num_envs"], runner.num_agents, 1), dtype=torch.float64, device="cuda:0")
 
     # simulate environment
-    total_rewards = np.zeros((args["num_envs"], runner.num_agents, 1), dtype=np.float64)
+    total_rewards = torch.zeros((args["num_envs"], runner.num_agents, 1), dtype=torch.float64, device="cuda:0")
     while simulation_app.is_running():
         # run everything in inference mode
         with torch.inference_mode():
@@ -225,25 +225,26 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
                     obs[:, agent_id, :], rnn_states[:, agent_id, :], masks[:, agent_id, :], None, None
                 )
                 action_space = action.shape[1]
-                actions[:, agent_id, :action_space] = action.cpu().numpy()
-                rnn_states[:, agent_id, :] = rnn_state.cpu().numpy()
+                actions[:, agent_id, :action_space] = action
+                rnn_states[:, agent_id, :] = rnn_state
 
-            runner.env.unwrapped._commands[:, :] = move_vector
-            # runner.env.unwrapped._commands[:, :] = movements["move_forward"]
+            # runner.env.unwrapped._commands[:, :] = move_vector
+
+            # runner.env.unwrapped.command_manager._terms['base_velocity'].command[:, :] = torch.tensor(movements["rotate_left"]+movements["move_forward"],device="cuda:0")
 
             obs, _, rewards, dones, _, _ = runner.env.step(actions)
 
             total_rewards += rewards
             print(f"Average reward: {rewards.mean(axis=0)}")
-            dones_env = np.all(dones, axis=1)
-            masks = np.ones(
-                (args["num_envs"], runner.num_agents, 1),
-                dtype=np.float64,
+            dones_env = torch.all(dones, axis=1)
+            masks = torch.ones((args["num_envs"], runner.num_agents, 1), dtype=torch.float64, device="cuda:0")
+            masks[dones_env] = torch.zeros(
+                ((dones_env).sum(), runner.num_agents, 1), dtype=torch.float64, device="cuda:0"
             )
-            masks[dones_env] = np.zeros(((dones_env).sum(), runner.num_agents, 1), dtype=np.float64)
-            rnn_states[dones_env] = np.zeros(
+            rnn_states[dones_env] = torch.zeros(
                 ((dones_env).sum(), runner.num_agents, runner.recurrent_n, runner.rnn_hidden_size),
-                dtype=np.float64,
+                dtype=torch.float64,
+                device="cuda:0",
             )
 
     runner.env.close()

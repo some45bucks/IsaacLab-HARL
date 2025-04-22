@@ -27,6 +27,18 @@ def upright_posture_bonus(
     return (up_proj > threshold).float()
 
 
+def contact_penalty(
+    env: ManagerBasedRLEnv,
+    asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
+    sensor_cfg: SceneEntityCfg = SceneEntityCfg("contact_sensor"),
+) -> torch.Tensor:
+    """penelty for making contact with any object"""
+    contact_sensor = env.scene.sensors[sensor_cfg.name]
+    net_contact_forces = contact_sensor.data.net_forces_w_history
+    contact = torch.sum(torch.square(torch.clip(net_contact_forces, -1, 1)))
+    return contact
+
+
 def move_to_target_bonus(
     env: ManagerBasedRLEnv,
     threshold: float,
@@ -75,6 +87,42 @@ class progress_reward(ManagerTermBase):
         self.potentials[:] = -torch.norm(to_target_pos, p=2, dim=-1) / env.step_dt
 
         return self.potentials - self.prev_potentials
+
+
+class forward_reward(ManagerTermBase):
+    """Reward for making progress towards the target."""
+
+    def __init__(self, env: ManagerBasedRLEnv, cfg: RewardTermCfg):
+        # initialize the base class
+        super().__init__(cfg, env)
+        # create history buffer
+        self.potentials = torch.zeros(env.num_envs, device=env.device)
+        self.prev_potentials = torch.zeros_like(self.potentials)
+
+    def reset(self, env_ids: torch.Tensor):
+        # extract the used quantities (to enable type-hinting)
+        asset: Articulation = self._env.scene["robot"]
+        # compute projection of current heading to desired heading vector
+        self.prev_positions = asset.data.root_link_pos_w[env_ids, :3]
+        # reward terms
+        # self.potentials[env_ids] = -torch.norm(to_target_pos, p=2, dim=-1) / self._env.step_dt
+        # self.prev_potentials[env_ids] = self.potentials[env_ids]
+
+    def __call__(
+        self,
+        env: ManagerBasedRLEnv,
+        asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
+    ) -> torch.Tensor:
+        # extract the used quantities (to enable type-hinting)
+        asset: Articulation = env.scene[asset_cfg.name]
+        # compute vector to target
+        current_positions = asset.data.root_link_pos_w[:, :3]
+
+        reward = (current_positions[:, 0] - self.prev_positions[:, 0]) / self._env.step_dt
+
+        self.prev_positions = current_positions
+
+        return reward
 
 
 class joint_limits_penalty_ratio(ManagerTermBase):

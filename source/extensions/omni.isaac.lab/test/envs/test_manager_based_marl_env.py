@@ -28,8 +28,8 @@ import carb
 import omni.usd
 from omni.isaac.core.utils.extensions import enable_extension
 
-from omni.isaac.lab.envs import ManagerBasedRLEnv, ManagerBasedRLEnvCfg
-from omni.isaac.lab.envs.ui import ManagerBasedRLEnvWindow
+from omni.isaac.lab.envs import ManagerBasedMARLEnv, ManagerBasedMARLEnvCfg
+from omni.isaac.lab.envs.ui import ManagerBasedMARLEnvWindow
 from omni.isaac.lab.scene import InteractiveSceneCfg
 from omni.isaac.lab.utils import configclass
 
@@ -54,7 +54,7 @@ def get_empty_base_env_cfg(device: str = "cuda:0", num_envs: int = 1, env_spacin
     """Generate base environment config based on device"""
 
     @configclass
-    class EmptyEnvCfg(ManagerBasedRLEnvCfg):
+    class EmptyEnvCfg(ManagerBasedMARLEnvCfg):
         """Configuration for the empty test environment."""
 
         # Scene settings
@@ -65,7 +65,7 @@ def get_empty_base_env_cfg(device: str = "cuda:0", num_envs: int = 1, env_spacin
         rewards: EmptyManagerCfg = EmptyManagerCfg()
         terminations: EmptyManagerCfg = EmptyManagerCfg()
         # Define window
-        ui_window_class_type: ManagerBasedRLEnvWindow = ManagerBasedRLEnvWindow
+        ui_window_class_type: ManagerBasedMARLEnvWindow = ManagerBasedMARLEnvWindow
 
         def __post_init__(self):
             """Post initialization."""
@@ -78,6 +78,8 @@ def get_empty_base_env_cfg(device: str = "cuda:0", num_envs: int = 1, env_spacin
             self.sim.device = device
             # episode length
             self.episode_length_s = 5.0
+
+            self.agents = ["agent0", "agent1"]
 
     return EmptyEnvCfg()
 
@@ -96,9 +98,9 @@ class TestManagerBasedRLEnvUI(unittest.TestCase):
         # create a new stage
         omni.usd.get_context().new_stage()
         # create environment
-        env = ManagerBasedRLEnv(cfg=get_empty_base_env_cfg(device=device))
+        env = ManagerBasedMARLEnv(cfg=get_empty_base_env_cfg(device=device))
         env.reset()
-        env.step(torch.zeros((1, 0)))
+        env.step({name: torch.zeros((1, 0)) for name in env.agents})
         # close the environment
         env.close()
 

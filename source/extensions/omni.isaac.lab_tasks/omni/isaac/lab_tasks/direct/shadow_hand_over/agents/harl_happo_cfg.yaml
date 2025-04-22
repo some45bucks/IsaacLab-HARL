@@ -17,7 +17,7 @@ train:
   # number of total training steps
   num_env_steps: 10000000
   # number of steps per environment per training data collection
-  episode_length: 200
+  episode_length: 16
   # logging interval
   log_interval: 5
   # evaluation interval
@@ -29,7 +29,8 @@ train:
   # whether to consider the case of truncation when an episode is done
   use_proper_time_limits: True
   # if set, load models from this directory; otherwise, randomly initialise the models
-  model_dir: ~
+  model_dir: #
+
 eval:
   # whether to use evaluation
   use_eval: True
@@ -45,7 +46,8 @@ render:
 model:
   # network parameters
   # hidden sizes for mlp module in the network
-  hidden_sizes: [128, 128]
+  hidden_sizes: [512, 256, 128]
+  hidden_sizes_critic: [512, 256, 128]
   # activation function, choose from sigmoid, tanh, relu, leaky_relu, selu
   activation_func: relu
   # whether to use feature normalization
@@ -87,9 +89,9 @@ algo:
   # clip parameter
   clip_param: 0.2
   # number of mini-batches per epoch for actor update
-  actor_num_mini_batch: 1
+  actor_num_mini_batch: 4
   # number of mini-batches per epoch for critic update
-  critic_num_mini_batch: 1
+  critic_num_mini_batch: 4
   # coefficient for entropy term in actor loss
   entropy_coef: 0.01
   # coefficient for value loss

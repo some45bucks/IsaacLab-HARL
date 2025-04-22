@@ -20,10 +20,10 @@ from omni.isaac.lab.ui.widgets import ManagerLiveVisualizer
 
 from .common import VecEnvStepReturn
 from .manager_based_env import ManagerBasedEnv
-from .manager_based_rl_env_cfg import ManagerBasedRLEnvCfg
+from .manager_based_marl_env_cfg import ManagerBasedMARLEnvCfg
 
 
-class ManagerBasedRLEnv(ManagerBasedEnv, gym.Env):
+class ManagerBasedMARLEnv(ManagerBasedEnv, gym.Env):
     """The superclass for the manager-based workflow reinforcement learning-based environments.
 
     This class inherits from :class:`ManagerBasedEnv` and implements the core functionality for
@@ -61,10 +61,10 @@ class ManagerBasedRLEnv(ManagerBasedEnv, gym.Env):
     }
     """Metadata for the environment."""
 
-    cfg: ManagerBasedRLEnvCfg
+    cfg: ManagerBasedMARLEnvCfg
     """Configuration for the environment."""
 
-    def __init__(self, cfg: ManagerBasedRLEnvCfg, render_mode: str | None = None, **kwargs):
+    def __init__(self, cfg: ManagerBasedMARLEnvCfg, render_mode: str | None = None, **kwargs):
         """Initialize the environment.
 
         Args:
@@ -82,10 +82,11 @@ class ManagerBasedRLEnv(ManagerBasedEnv, gym.Env):
         self.common_step_counter = 0
         # -- init buffers
         # self.episode_length_buf = torch.zeros(self.num_envs, device=self.device, dtype=torch.long)
+
+        # set episode length random
         self.episode_length_buf = torch.randint(
             0, self.max_episode_length, (self.num_envs,), device=self.device, dtype=torch.long
         )
-
         # -- set the framerate of the gym video recorder wrapper so that the playback speed of the produced video matches the simulation
         self.metadata["render_fps"] = 1 / self.step_dt
 
@@ -99,6 +100,16 @@ class ManagerBasedRLEnv(ManagerBasedEnv, gym.Env):
     def max_episode_length_s(self) -> float:
         """Maximum episode length in seconds."""
         return self.cfg.episode_length_s
+
+    @property
+    def agents(self) -> Sequence[str]:
+        """List of agent names in the environment."""
+        return self.cfg.agents
+
+    @property
+    def num_agents(self) -> int:
+        """nun of agents"""
+        return len(self.cfg.agents)
 
     @property
     def max_episode_length(self) -> int:
@@ -153,7 +164,7 @@ class ManagerBasedRLEnv(ManagerBasedEnv, gym.Env):
     Operations - MDP
     """
 
-    def step(self, action: torch.Tensor) -> VecEnvStepReturn:
+    def step(self, actions: dict[str, torch.Tensor]) -> VecEnvStepReturn:
         """Execute one time-step of the environment's dynamics and reset terminated environments.
 
         Unlike the :class:`ManagerBasedEnv.step` class, the function performs the following operations:
@@ -167,13 +178,14 @@ class ManagerBasedRLEnv(ManagerBasedEnv, gym.Env):
         7. Return the observations, rewards, resets and extras.
 
         Args:
-            action: The actions to apply on the environment. Shape is (num_envs, action_dim).
+            action: dict of actions for each agent. Shape is (num_envs, action_dim) for each tensor.
 
         Returns:
             A tuple containing the observations, rewards, resets (terminated and truncated) and extras.
         """
         # process actions
-        self.action_manager.process_action(action.to(self.device))
+
+        self.action_manager.process_action(torch.cat(list(actions.values()), dim=-1).to(self.device))
 
         self.recorder_manager.record_pre_step()
 
@@ -208,6 +220,10 @@ class ManagerBasedRLEnv(ManagerBasedEnv, gym.Env):
         self.reset_time_outs = self.termination_manager.time_outs
         # -- reward computation
         self.reward_buf = self.reward_manager.compute(dt=self.step_dt)
+
+        self.reward_buf = {id: self.reward_buf.clone() for id in self.agents}
+        self.reset_terminated = {id: self.reset_terminated.clone() for id in self.agents}
+        self.reset_time_outs = {id: self.reset_time_outs.clone() for id in self.agents}
 
         if len(self.recorder_manager.active_terms) > 0:
             # update observations for recording if needed
@@ -339,13 +355,19 @@ class ManagerBasedRLEnv(ManagerBasedEnv, gym.Env):
                     term_name: gym.spaces.Box(low=-np.inf, high=np.inf, shape=term_dim)
                     for term_name, term_dim in zip(group_term_names, group_dim)
                 })
-        # action space (unbounded since we don't impose any limits)
-        action_dim = sum(self.action_manager.action_term_dim)
-        self.single_action_space = gym.spaces.Box(low=-np.inf, high=np.inf, shape=(action_dim,))
 
         # batch the spaces for vectorized environments
-        self.observation_space = gym.vector.utils.batch_space(self.single_observation_space, self.num_envs)
-        self.action_space = gym.vector.utils.batch_space(self.single_action_space, self.num_envs)
+        self.observation_spaces = gym.vector.utils.batch_space(self.single_observation_space, self.num_envs)
+
+        # action space (unbounded since we don't impose any limits)
+        self.single_action_space = gym.spaces.Dict()
+        for term_name, term_dim in zip(self.action_manager.active_terms, self.action_manager.action_term_dim):
+            # extract quantities about the group
+
+            self.single_action_space[term_name] = gym.spaces.Box(low=-np.inf, high=np.inf, shape=(term_dim,))
+
+        # batch the spaces for vectorized environments
+        self.action_spaces = gym.vector.utils.batch_space(self.single_action_space, self.num_envs)
 
     def _reset_idx(self, env_ids: Sequence[int]):
         """Reset environments based on specified indices.
@@ -392,4 +414,6 @@ class ManagerBasedRLEnv(ManagerBasedEnv, gym.Env):
         self.extras["log"].update(info)
 
         # reset the episode length buffer
-        self.episode_length_buf[env_ids] = 0
+        self.episode_length_buf[env_ids] = torch.randint(
+            0, self.max_episode_length, (len(env_ids),), device=self.device, dtype=torch.long
+        )

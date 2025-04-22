@@ -4,7 +4,7 @@ seed: 42
 # Models are instantiated using skrl's model instantiator utility
 # https://skrl.readthedocs.io/en/latest/api/utils/model_instantiators.html
 models:
-  separate: True
+  separate: False
   policy:  # see gaussian_model parameters
     class: GaussianMixin
     clip_actions: False
@@ -36,24 +36,22 @@ memory:
   memory_size: -1  # automatically determined (same as agent:rollouts)
 
 
-# MAPPO agent configuration (field names are from MAPPO_DEFAULT_CONFIG)
-# https://skrl.readthedocs.io/en/latest/api/multi_agents/mappo.html
+# PPO agent configuration (field names are from PPO_DEFAULT_CONFIG)
+# https://skrl.readthedocs.io/en/latest/api/agents/ppo.html
 agent:
-  class: MAPPO
-  rollouts: 16
+  class: PPO
+  rollouts: 24
   learning_epochs: 5
   mini_batches: 4
   discount_factor: 0.99
   lambda: 0.95
-  learning_rate: 5.0e-04
+  learning_rate: 1.0e-03
   learning_rate_scheduler: KLAdaptiveLR
   learning_rate_scheduler_kwargs:
-    kl_threshold: 0.016
-  state_preprocessor: RunningStandardScaler
+    kl_threshold: 0.01
+  state_preprocessor: null
   state_preprocessor_kwargs: null
-  shared_state_preprocessor: RunningStandardScaler
-  shared_state_preprocessor_kwargs: null
-  value_preprocessor: RunningStandardScaler
+  value_preprocessor: null
   value_preprocessor_kwargs: null
   random_timesteps: 0
   learning_starts: 0
@@ -61,14 +59,14 @@ agent:
   ratio_clip: 0.2
   value_clip: 0.2
   clip_predicted_values: True
-  entropy_loss_scale: 0.0
-  value_loss_scale: 2.0
+  entropy_loss_scale: 0.0025
+  value_loss_scale: 0.5
   kl_threshold: 0.0
   rewards_shaper_scale: 1.0
   time_limit_bootstrap: False
   # logging and checkpoint
   experiment:
-    directory: "shadow_hand_over"
+    directory: "spot_flat"
     experiment_name: ""
     write_interval: auto
     checkpoint_interval: auto
@@ -78,5 +76,5 @@ agent:
 # https://skrl.readthedocs.io/en/latest/api/trainers/sequential.html
 trainer:
   class: SequentialTrainer
-  timesteps: 36000
+  timesteps: 480000
   environment_info: log

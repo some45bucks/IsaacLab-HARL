@@ -32,15 +32,10 @@ parser.add_argument(
         "happo",
         "hatrpo",
         "haa2c",
-        "haddpg",
-        "hatd3",
-        "hasac",
-        "had3qn",
-        "maddpg",
-        "matd3",
         "mappo",
+        "mappo_unshare",
     ],
-    help="Algorithm name. Choose from: happo, hatrpo, haa2c, haddpg, hatd3, hasac, had3qn, maddpg, matd3, mappo.",
+    help="Algorithm name. Choose from: happo, hatrpo, haa2c, mappo, and mappo_unshare.",
 )
 
 # append AppLauncher cli args
@@ -67,7 +62,8 @@ from omni.isaac.lab.envs import DirectMARLEnvCfg, DirectRLEnvCfg, ManagerBasedRL
 import omni.isaac.lab_tasks  # noqa: F401
 from omni.isaac.lab_tasks.utils.hydra import hydra_task_config
 
-agent_cfg_entry_point = "harl_ppo_cfg_entry_point"
+algorithm = args_cli.algorithm.lower()
+agent_cfg_entry_point = f"harl_{algorithm}_cfg_entry_point"
 
 
 @hydra_task_config(args_cli.task, agent_cfg_entry_point)
@@ -76,6 +72,7 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     args = args_cli.__dict__
 
     args["env"] = "isaaclab"
+
     args["algo"] = args["algorithm"]
 
     algo_args = agent_cfg
@@ -110,6 +107,7 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     }
 
     # create runner
+
     runner = RUNNER_REGISTRY[args["algo"]](args, algo_args, env_args)
     runner.run()
     runner.close()

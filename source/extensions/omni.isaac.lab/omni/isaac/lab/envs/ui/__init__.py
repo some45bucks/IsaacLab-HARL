@@ -11,5 +11,6 @@ toggling different debug visualization tools, and other user-defined functionali
 """
 
 from .base_env_window import BaseEnvWindow
+from .manager_based_marl_env_window import ManagerBasedMARLEnvWindow
 from .manager_based_rl_env_window import ManagerBasedRLEnvWindow
 from .viewport_camera_controller import ViewportCameraController
