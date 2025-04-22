@@ -1,103 +1,20 @@
-# For Heterogeneous Agent Reinforcement Learning
-[![IsaacSim](https://img.shields.io/badge/IsaacSim-4.2.0-silver.svg)](https://docs.omniverse.nvidia.com/isaacsim/latest/overview.html)
+![Isaac Lab](docs/source/_static/isaaclab.jpg)
+
+---
+
+# Isaac Lab
+
+[![IsaacSim](https://img.shields.io/badge/IsaacSim-4.5.0-silver.svg)](https://docs.isaacsim.omniverse.nvidia.com/latest/index.html)
 [![Python](https://img.shields.io/badge/python-3.10-blue.svg)](https://docs.python.org/3/whatsnew/3.10.html)
 [![Linux platform](https://img.shields.io/badge/platform-linux--64-orange.svg)](https://releases.ubuntu.com/20.04/)
 [![Windows platform](https://img.shields.io/badge/platform-windows--64-orange.svg)](https://www.microsoft.com/en-us/)
 [![pre-commit](https://img.shields.io/github/actions/workflow/status/isaac-sim/IsaacLab/pre-commit.yaml?logo=pre-commit&logoColor=white&label=pre-commit&color=brightgreen)](https://github.com/isaac-sim/IsaacLab/actions/workflows/pre-commit.yaml)
 [![docs status](https://img.shields.io/github/actions/workflow/status/isaac-sim/IsaacLab/docs.yaml?label=docs&color=brightgreen)](https://github.com/isaac-sim/IsaacLab/actions/workflows/docs.yaml)
 [![License](https://img.shields.io/badge/license-BSD--3-yellow.svg)](https://opensource.org/licenses/BSD-3-Clause)
-
-<!-- ![GIF 1](withoutpolicy.gif) ![GIF 2](withpolicy.gif) -->
-<!--
-<div style="display: flex; justify-content: space-around;">
-    <img src="withoutpolicy.gif" width="45%">
-    <img src="withpolicy.gif" width="45%">
-</div>
-
-*Before and after results of multi-agent reinforcement learning for bar balancing task* -->
-
----
-Use [these instructions](https://docs.omniverse.nvidia.com/isaacsim/latest/installation/install_python.html#install-isaac-sim-using-pip) to install isaac sim.
-
-Make sure to run all the following commands with your isaaclab conda environment activated, as highlighted in the instructions provided above.
+[![License](https://img.shields.io/badge/license-Apache--2.0-yellow.svg)](https://opensource.org/license/apache-2-0)
 
 
-```bash
-cd IsaacLab
-./isaaclab.sh -i
-pip install gymnasium==0.29.0
-```
-Note that we modified the `isaaclab.sh` install script to point to our fork of the [HARL repository](https://github.com/some45bucks/HARL.git), which the script will automatically install into your conda environment. If you want to make changes to the HARL code yourself, with your conda environment activated run the following
-
-```bash
-git clone https://github.com/some45bucks/HARL.git
-cd HARL
-pip install -e .
-```
-This will uninstall the default HARL and reference this one instead, recognizing any changes to the code that you make.
-
-
-At this point you should be able to run the trained cooperative bar balancing task.
-
-```bash
-cd IsaacLab
-python source/standalone/workflows/harl/play_keyboard.py --task Isaac-Multi-Agent-Flat-Anymal-C-Direct-v0 --num_envs 1 --algorithm happo --dir source/extensions/omni.isaac.lab_tasks/omni/isaac/lab_tasks/direct/anymal_c_multi_agent/best_model
-```
-
-Which will allow you to interact with the trained by using the keyboard to give velocity commands.
-
-```
-a,d = angular velocity commands (left, right)
-arrow keys = x,y velocity commands (forward, backward, left, right)
-```
-
-If you are just interested in running the environment and seeing how the environment resets, training works etc. You can use the `play.py` script instead.
-
-
-# Training custom environment
-
-
-```bash
-python source/standalone/workflows/harl/train.py  --task Isaac-Multi-Agent-Flat-Anymal-C-Direct-v0 --video_interval 10_000 --num_envs 2048 --save_interval 10 --log_interval 10 --algorithm happo --headless --num_env_steps 2_000_000_000
-```
-
-You can run `python play.py -h` to see all arguments. Also note that the configuration for the algorithms can be found in their yaml files, an
-example of which can be found at `source/extensions/omni.isaac.lab_tasks/omni/isaac/lab_tasks/direct/anymal_c_multi_agent/agents/harl_ppo_cfg.yaml`, however, these will be overwritten with any parameters you define in the `train.py` script.
-
-
-# Registering a New Environment in Isaac Lab
-
-Isaac Lab allows you to register custom environments in the Gym framework, enabling efficient use with Gym's `make` command. This guide provides steps to register a new environment, using the example of the `DirectEnvRL`-based Piano Movers environment.
-
----
-
-## Environment Registration Example
-
-The best way to understand how to set up your own custom environment is by looking at the environment set up at `IsaacLab/source/extensions/omni.isaac.lab_tasks/omni/isaac/lab_tasks/direct/anymal_c_multi_agent`, which is the bar balancing environment. A simple way to get started is to make a copy of this folder and begin modifying the environment to your specified needs. This folder contains the environment code and the necessary registration logic. To register your custom environment, follow these steps:
-
----
-
-## Steps to Register a New Environment
-
-### 1. **Modify Extensions**
-
-If you are adding a new `DirectEnvRL` environment, place your code in the following directory:
-
-```
-IsaacLab/source/extensions/omni.isaac.lab_tasks/omni/isaac/lab_tasks/direct/
-```
-
-### 2. **Update `__init__.py`**
-
-Ensure that your new environment is registered in the Gym framework by adding the appropriate registration logic to the `__init__.py` file in the corresponding directory.
-
-Now you can use the instructions provided at the beginning of this README for training the environment. We advise you also utilize the debugging tools provided in Visual Studio Code and setup the corresponding `launch.json` file to aid in your development.
-
-
-![Isaac Lab](docs/source/_static/isaaclab.jpg)
-# Isaac Lab
-
-**Isaac Lab** is a GPU-accelerated, open-source framework designed to unify and simplify robotics research workflows, such as reinforcement learning, imitation learning, and motion planning. Built on [NVIDIA Isaac Sim](https://docs.omniverse.nvidia.com/isaacsim/latest/overview.html), it combines fast and accurate physics and sensor simulation, making it an ideal choice for sim-to-real transfer in robotics.
+**Isaac Lab** is a GPU-accelerated, open-source framework designed to unify and simplify robotics research workflows, such as reinforcement learning, imitation learning, and motion planning. Built on [NVIDIA Isaac Sim](https://docs.isaacsim.omniverse.nvidia.com/latest/index.html), it combines fast and accurate physics and sensor simulation, making it an ideal choice for sim-to-real transfer in robotics.
 
 Isaac Lab provides developers with a range of essential features for accurate sensor simulation, such as RTX-based cameras, LIDAR, or contact sensors. The framework's GPU acceleration enables users to run complex simulations and computations faster, which is key for iterative processes like reinforcement learning and data-intensive tasks. Moreover, Isaac Lab can run locally or be distributed across the cloud, offering flexibility for large-scale deployments.
 
@@ -126,6 +43,19 @@ We wholeheartedly welcome contributions from the community to make this framewor
 These may happen as bug reports, feature requests, or code contributions. For details, please check our
 [contribution guidelines](https://isaac-sim.github.io/IsaacLab/main/source/refs/contributing.html).
 
+## Show & Tell: Share Your Inspiration
+
+We encourage you to utilize our [Show & Tell](https://github.com/isaac-sim/IsaacLab/discussions/categories/show-and-tell) area in the
+`Discussions` section of this repository. This space is designed for you to:
+
+* Share the tutorials you've created
+* Showcase your learning content
+* Present exciting projects you've developed
+
+By sharing your work, you'll inspire others and contribute to the collective knowledge
+of our community. Your contributions can spark new ideas and collaborations, fostering
+innovation in robotics and simulation.
+
 ## Troubleshooting
 
 Please see the [troubleshooting](https://isaac-sim.github.io/IsaacLab/main/source/refs/troubleshooting.html) section for
@@ -139,9 +69,18 @@ or opening a question on its [forums](https://forums.developer.nvidia.com/c/agx-
 * Please use GitHub [Discussions](https://github.com/isaac-sim/IsaacLab/discussions) for discussing ideas, asking questions, and requests for new features.
 * Github [Issues](https://github.com/isaac-sim/IsaacLab/issues) should only be used to track executable pieces of work with a definite scope and a clear deliverable. These can be fixing bugs, documentation issues, new features, or general updates.
 
+## Connect with the NVIDIA Omniverse Community
+
+Have a project or resource you'd like to share more widely? We'd love to hear from you! Reach out to the
+NVIDIA Omniverse Community team at OmniverseCommunity@nvidia.com to discuss potential opportunities
+for broader dissemination of your work.
+
+Join us in building a vibrant, collaborative ecosystem where creativity and technology intersect. Your
+contributions can make a significant impact on the Isaac Lab community and beyond!
+
 ## License
 
-The Isaac Lab framework is released under [BSD-3 License](LICENSE). The license files of its dependencies and assets are present in the [`docs/licenses`](docs/licenses) directory.
+The Isaac Lab framework is released under [BSD-3 License](LICENSE). The `isaaclab_mimic` extension and its corresponding standalone scripts are released under [Apache 2.0](LICENSE-mimic). The license files of its dependencies and assets are present in the [`docs/licenses`](docs/licenses) directory.
 
 ## Acknowledgement
 

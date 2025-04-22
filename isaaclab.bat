@@ -81,7 +81,7 @@ if errorlevel 1 (
     set isaacsim_exe=!isaac_path!\isaac-sim.bat
 ) else (
     rem if isaac sim installed from pip
-    set isaacsim_exe=isaacsim omni.isaac.sim
+    set isaacsim_exe=isaacsim isaacsim.exp.full
 )
 rem check if there is a python path available
 if not exist "%isaacsim_exe%" (
@@ -236,7 +236,7 @@ goto :eof
 rem Print the usage description
 :print_help
 echo.
-echo usage: %~nx0 [-h] [-i] [-f] [-p] [-s] [-v] [-d] [-c] -- Utility to manage extensions in Isaac Lab.
+echo usage: %~nx0 [-h] [-i] [-f] [-p] [-s] [-v] [-d] [-n] [-c] -- Utility to manage extensions in Isaac Lab.
 echo.
 echo optional arguments:
 echo     -h, --help           Display the help content.
@@ -247,7 +247,8 @@ echo     -s, --sim            Run the simulator executable (isaac-sim.bat) provi
 echo     -t, --test           Run all python unittest tests.
 echo     -v, --vscode         Generate the VSCode settings file from template.
 echo     -d, --docs           Build the documentation from source using sphinx.
-echo     -c, --conda [NAME]   Create the conda environment for Isaac Lab. Default name is 'isaaclab'.
+echo     -n, --new            Create a new external project or internal task from template.
+echo     -c, --conda [NAME]   Create the conda environment for Isaac Lab. Default name is 'env_isaaclab'.
 echo.
 goto :eof
 
@@ -269,10 +270,10 @@ set "arg=%~1"
 
 rem read the key
 if "%arg%"=="-i" (
-    rem install the python packages in omni.isaac.rl/source directory
+    rem install the python packages in isaaclab/source directory
     echo [INFO] Installing extensions inside the Isaac Lab repository...
     call :extract_python_exe
-    for /d %%d in ("%ISAACLAB_PATH%\source\extensions\*") do (
+    for /d %%d in ("%ISAACLAB_PATH%\source\*") do (
         set ext_folder="%%d"
         call :install_isaaclab_extension
     )
@@ -291,13 +292,13 @@ if "%arg%"=="-i" (
         shift
     )
     rem install the rl-frameworks specified
-    call !python_exe! -m pip install -e %ISAACLAB_PATH%\source\extensions\omni.isaac.lab_tasks[!framework_name!]
+    call !python_exe! -m pip install -e %ISAACLAB_PATH%\source\isaaclab_rl[!framework_name!]
     shift
 ) else if "%arg%"=="--install" (
-    rem install the python packages in omni.isaac.rl/source directory
+    rem install the python packages in source directory
     echo [INFO] Installing extensions inside the Isaac Lab repository...
     call :extract_python_exe
-    for /d %%d in ("%ISAACLAB_PATH%\source\extensions\*") do (
+    for /d %%d in ("%ISAACLAB_PATH%\source\*") do (
         set ext_folder="%%d"
         call :install_isaaclab_extension
     )
@@ -316,7 +317,7 @@ if "%arg%"=="-i" (
         shift
     )
     rem install the rl-frameworks specified
-    call !python_exe! -m pip install -e %ISAACLAB_PATH%\source\extensions\omni.isaac.lab_tasks[!framework_name!]
+    call !python_exe! -m pip install -e %ISAACLAB_PATH%\source\isaaclab_rl[!framework_name!]
     rem update the vscode settings
     rem once we have a docker container, we need to disable vscode settings
     call :update_vscode_settings
@@ -328,8 +329,8 @@ if "%arg%"=="-i" (
         set conda_env_name=%2
         shift
     ) else (
-        echo [INFO] Using default conda environment name: isaaclab
-        set conda_env_name=isaaclab
+        echo [INFO] Using default conda environment name: env_isaaclab
+        set conda_env_name=env_isaaclab
     )
     call :setup_conda_env %conda_env_name%
     shift
@@ -340,8 +341,8 @@ if "%arg%"=="-i" (
         set conda_env_name=%2
         shift
     ) else (
-        echo [INFO] Using default conda environment name: isaaclab
-        set conda_env_name=isaaclab
+        echo [INFO] Using default conda environment name: env_isaaclab
+        set conda_env_name=env_isaaclab
     )
     call :setup_conda_env %conda_env_name%
     shift
@@ -446,7 +447,7 @@ if "%arg%"=="-i" (
             set "skip=1"
         )
     )
-    !isaacsim_exe! --ext-folder %ISAACLAB_PATH%\source\extensions !allArgs1
+    !isaacsim_exe! --ext-folder %ISAACLAB_PATH%\source !allArgs1
     goto :end
 ) else if "%arg%"=="--sim" (
     rem run the simulator exe provided by Isaac Sim
@@ -461,7 +462,45 @@ if "%arg%"=="-i" (
             set "skip=1"
         )
     )
-    !isaacsim_exe! --ext-folder %ISAACLAB_PATH%\source\extensions !allArgs1
+    !isaacsim_exe! --ext-folder %ISAACLAB_PATH%\source !allArgs1
+    goto :end
+) else if "%arg%"=="-n" (
+    rem run the template generator script
+    call :extract_python_exe
+    set "allArgs="
+    for %%a in (%*) do (
+        REM Append each argument to the variable, skip the first one
+        if defined skip (
+            set "allArgs=!allArgs! %%a"
+        ) else (
+            set "skip=1"
+        )
+    )
+    echo [INFO] Installing template dependencies...
+    !python_exe! -m pip install -q -r tools\template\requirements.txt
+    echo.
+    echo [INFO] Running template generator...
+    echo.
+    !python_exe! tools\template\cli.py !allArgs!
+    goto :end
+) else if "%arg%"=="--new" (
+    rem run the template generator script
+    call :extract_python_exe
+    set "allArgs="
+    for %%a in (%*) do (
+        REM Append each argument to the variable, skip the first one
+        if defined skip (
+            set "allArgs=!allArgs! %%a"
+        ) else (
+            set "skip=1"
+        )
+    )
+    echo [INFO] Installing template dependencies...
+    !python_exe! -m pip install -q -r tools\template\requirements.txt
+    echo.
+    echo [INFO] Running template generator...
+    echo.
+    !python_exe! tools\template\cli.py !allArgs!
     goto :end
 ) else if "%arg%"=="-t" (
     rem run the python provided by Isaac Sim

@@ -26,10 +26,12 @@ Guidelines for modifications:
 * James Smith
 * James Tigue
 * Kelly (Yunrong) Guo
+* Matthew Trepte
 * Mayank Mittal
 * Nikita Rudin
 * Pascal Roth
 * Sheikh Dawood
+* Ossama Ahmed
 
 ## Contributors
 
@@ -38,35 +40,48 @@ Guidelines for modifications:
 * Andrej Orsula
 * Anton Bjørndahl Mortensen
 * Arjun Bhardwaj
+* Ashwin Varghese Kuruttukulam
 * Brayden Zhang
+* Cameron Upright
 * Calvin Yu
+* Cheng-Rong Lai
 * Chenyu Yang
+* Clemens Schwarke
 * CY (Chien-Ying) Chen
 * David Yang
 * Dorsa Rohani
+* Felipe Mohr
 * Felix Yu
 * Gary Lvov
 * Giulio Romualdi
 * Haoran Zhou
 * HoJin Jeon
 * Hongwei Xiong
+* Hongyu Li
 * Iretiayo Akinola
+* Jack Zeng
 * Jan Kerner
 * Jean Tampon
 * Jia Lin Yuan
 * Jinghuan Shang
 * Jingzhou Liu
+* Jinqi Wei
 * Johnson Sun
 * Kaixi Bao
 * Kourosh Darvish
+* Kousheek Chakraborty
 * Lionel Gulich
 * Louis Le Lay
 * Lorenz Wellhausen
+* Manuel Schweiger
 * Masoud Moghani
 * Michael Gussert
 * Michael Noseworthy
 * Muhong Guo
+* Nicola Loi
+* Nuoyan Chen (Alvin)
 * Nuralem Abizov
+* Ori Gadot
 * Oyindamola Omotuyi
 * Özhan Özen
 * Peter Du
@@ -77,7 +92,10 @@ Guidelines for modifications:
 * Rosario Scalise
 * Ryley McCarroll
 * Shafeef Omar
+* Shundo Kishi
 * Stephan Pleines
+* Tyler Lum
+* Victor Khaustov
 * Vladimir Fokow
 * Wei Yang
 * Xavier Nal
