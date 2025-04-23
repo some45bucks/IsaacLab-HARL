@@ -211,7 +211,7 @@ class RewardsCfg:
     )
     # (7) Penalty for reaching close to joint limits
     joint_pos_limits = RewTerm(
-        func=mdp.joint_pos_limits_penalty_ratio,
+        func=mdp.joint_limits_penalty_ratio,
         weight=-0.25,
         params={
             "threshold": 0.98,

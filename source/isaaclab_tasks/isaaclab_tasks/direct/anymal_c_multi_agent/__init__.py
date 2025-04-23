@@ -18,7 +18,7 @@ from .anymal_c_multi_agent import AnymalCMultiAgentBar, AnymalCMultiAgentFlatEnv
 
 gym.register(
     id="Isaac-Multi-Agent-Flat-Anymal-C-Direct-v0",
-    entry_point="omni.isaac.lab_tasks.direct.anymal_c_multi_agent:AnymalCMultiAgentBar",
+    entry_point="isaaclab_tasks.direct.anymal_c_multi_agent:AnymalCMultiAgentBar",
     disable_env_checker=True,
     kwargs={
         "env_cfg_entry_point": AnymalCMultiAgentFlatEnvCfg,
@@ -31,7 +31,7 @@ gym.register(
 
 gym.register(
     id="Isaac-Multi-Agent-Velocity-Rough-Anymal-C-Direct-v0",
-    entry_point="omni.isaac.lab_tasks.direct.anymal_c_multi_agent:AnymalCMultiAgentBar",
+    entry_point="isaaclab_tasks.direct.anymal_c_multi_agent:AnymalCMultiAgentBar",
     disable_env_checker=True,
     kwargs={
         "env_cfg_entry_point": AnymalCMultiAgentRoughEnvCfg,

@@ -13,9 +13,10 @@ import torch
 from collections.abc import Sequence
 from typing import Any, ClassVar
 
-from omni.isaac.lab.managers import CommandManager, CurriculumManager, RewardManager, TerminationManager
-from omni.isaac.lab.ui.widgets import ManagerLiveVisualizer
-from omni.isaac.version import get_version
+from isaacsim.core.version import get_version
+
+from isaaclab.managers import CommandManager, CurriculumManager, RewardManager, TerminationManager
+from isaaclab.ui.widgets import ManagerLiveVisualizer
 
 from .common import VecEnvStepReturn
 from .manager_based_env import ManagerBasedEnv

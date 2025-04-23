@@ -10,7 +10,7 @@ from __future__ import annotations
 
 """Launch Isaac Sim Simulator first."""
 
-from omni.isaac.lab.app import AppLauncher, run_tests
+from isaaclab.app import AppLauncher, run_tests
 
 # Can set this to False to see the GUI for debugging
 HEADLESS = True
@@ -27,10 +27,11 @@ import unittest
 import carb
 import omni.usd
 from omni.isaac.core.utils.extensions import enable_extension
-from omni.isaac.lab.envs import ManagerBasedMARLEnv, ManagerBasedMARLEnvCfg
-from omni.isaac.lab.envs.ui import ManagerBasedMARLEnvWindow
-from omni.isaac.lab.scene import InteractiveSceneCfg
-from omni.isaac.lab.utils import configclass
+
+from isaaclab.envs import ManagerBasedMARLEnv, ManagerBasedMARLEnvCfg
+from isaaclab.envs.ui import ManagerBasedMARLEnvWindow
+from isaaclab.scene import InteractiveSceneCfg
+from isaaclab.utils import configclass
 
 enable_extension("omni.isaac.ui")
 

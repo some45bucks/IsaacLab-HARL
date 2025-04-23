@@ -13,7 +13,7 @@ from . import agents
 
 gym.register(
     id="Isaac-Velocity-Flat-Spot-Factorized-v0",
-    entry_point="omni.isaac.lab.envs:ManagerBasedMARLEnv",
+    entry_point="isaaclab.envs:ManagerBasedMARLEnv",
     disable_env_checker=True,
     kwargs={
         "env_cfg_entry_point": f"{__name__}.flat_env_factorized_cfg:SpotFlatFactEnvCfg",
@@ -31,7 +31,7 @@ gym.register(
 
 gym.register(
     id="Isaac-Velocity-Flat-Spot-Factorized-Play-v0",
-    entry_point="omni.isaac.lab.envs:ManagerBasedMARLEnv",
+    entry_point="isaaclab.envs:ManagerBasedMARLEnv",
     disable_env_checker=True,
     kwargs={
         "env_cfg_entry_point": f"{__name__}.flat_env_factorized_cfg:SpotFlatFactEnvCfg_PLAY",

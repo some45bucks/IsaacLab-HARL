@@ -22,7 +22,7 @@ from .h1_anymal_push_env import (
 
 gym.register(
     id="Isaac-Anymal-H1-Push-Rough-Direct-v0",
-    entry_point="omni.isaac.lab_tasks.direct.h1_anymal_push_env:HeterogeneousPushMultiAgent",
+    entry_point="isaaclab_tasks.direct.h1_anymal_push_env:HeterogeneousPushMultiAgent",
     disable_env_checker=True,
     kwargs={
         "env_cfg_entry_point": HeterogeneousPushMultiAgentRoughEnvCfg,
@@ -35,7 +35,7 @@ gym.register(
 
 gym.register(
     id="Isaac-Anymal-H1-Push-Direct-v0",
-    entry_point="omni.isaac.lab_tasks.direct.h1_anymal_push_env:HeterogeneousPushMultiAgent",
+    entry_point="isaaclab_tasks.direct.h1_anymal_push_env:HeterogeneousPushMultiAgent",
     disable_env_checker=True,
     kwargs={
         "env_cfg_entry_point": HeterogeneousPushMultiAgentFlatEnvCfg,

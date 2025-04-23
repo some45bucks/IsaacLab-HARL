@@ -13,8 +13,9 @@ import threading
 import time
 import torch
 
-from omni.isaac.lab.app import AppLauncher
 from pynput.keyboard import Key, Listener
+
+from isaaclab.app import AppLauncher
 
 parser = argparse.ArgumentParser(description="Train an RL agent with HARL.")
 parser.add_argument(
@@ -53,10 +54,12 @@ sys.argv = [sys.argv[0]] + hydra_args
 app_launcher = AppLauncher(args_cli)
 simulation_app = app_launcher.app
 
-import omni.isaac.lab_tasks  # noqa: F401
 from harl.runners import RUNNER_REGISTRY
-from omni.isaac.lab.envs import DirectMARLEnvCfg, DirectRLEnvCfg, ManagerBasedRLEnvCfg
-from omni.isaac.lab_tasks.utils.hydra import hydra_task_config
+
+from isaaclab.envs import DirectMARLEnvCfg, DirectRLEnvCfg, ManagerBasedRLEnvCfg
+
+import isaaclab_tasks  # noqa: F401
+from isaaclab_tasks.utils.hydra import hydra_task_config
 
 algorithm = args_cli.algorithm.lower()
 agent_cfg_entry_point = f"harl_{algorithm}_cfg_entry_point"

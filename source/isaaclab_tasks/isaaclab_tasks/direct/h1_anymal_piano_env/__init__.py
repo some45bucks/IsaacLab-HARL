@@ -22,7 +22,7 @@ from .h1_anymal_piano_env import (
 
 gym.register(
     id="Isaac-Anymal-H1-Piano-Direct-v0",
-    entry_point="omni.isaac.lab_tasks.direct.h1_anymal_piano_env:HeterogeneousMultiAgentPiano",
+    entry_point="isaaclab_tasks.direct.h1_anymal_piano_env:HeterogeneousMultiAgentPiano",
     disable_env_checker=True,
     kwargs={
         "env_cfg_entry_point": HeterogeneousMultiAgentFlatEnvCfg,
@@ -35,7 +35,7 @@ gym.register(
 
 gym.register(
     id="Isaac-Anymal-H1-Piano-Rough-Direct-v0",
-    entry_point="omni.isaac.lab_tasks.direct.h1_anymal_piano_env:HeterogeneousMultiAgentPiano",
+    entry_point="isaaclab_tasks.direct.h1_anymal_piano_env:HeterogeneousMultiAgentPiano",
     disable_env_checker=True,
     kwargs={
         "env_cfg_entry_point": HeterogeneousMultiAgentRoughEnvCfg,

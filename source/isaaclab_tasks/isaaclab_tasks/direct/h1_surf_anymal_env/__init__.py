@@ -22,7 +22,7 @@ from .h1_surf_anymal_env import (
 
 gym.register(
     id="Isaac-Anymal-H1-Surf-Flat-Direct",
-    entry_point="omni.isaac.lab_tasks.direct.h1_surf_anymal_env:HeterogeneousMultiAgentSurf",
+    entry_point="isaaclab_tasks.direct.h1_surf_anymal_env:HeterogeneousMultiAgentSurf",
     disable_env_checker=True,
     kwargs={
         "env_cfg_entry_point": HeterogeneousMultiAgentFlatSurfEnvCfg,
@@ -34,7 +34,7 @@ gym.register(
 )
 gym.register(
     id="Isaac-Anymal-H1-Surf-Rough-Direct",
-    entry_point="omni.isaac.lab_tasks.direct.h1_surf_anymal_env:HeterogeneousMultiAgentSurf",
+    entry_point="isaaclab_tasks.direct.h1_surf_anymal_env:HeterogeneousMultiAgentSurf",
     disable_env_checker=True,
     kwargs={
         "env_cfg_entry_point": HeterogeneousMultiAgentRoughSurfEnvCfg,
