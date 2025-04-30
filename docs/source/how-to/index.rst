@@ -67,11 +67,20 @@ This guide demonstrates how to estimate the number of cameras one can run on the
 
     estimate_how_many_cameras_can_run
 
+Configure Rendering
+-------------------
+
+This guide demonstrates how to select rendering mode presets and overwrite preset rendering settings.
+
+.. toctree::
+    :maxdepth: 1
+
+    configure_rendering
 
 Drawing Markers
 ---------------
 
-This guide explains how to use the :class:`~omni.isaac.lab.markers.VisualizationMarkers` class to draw markers in
+This guide explains how to use the :class:`~isaaclab.markers.VisualizationMarkers` class to draw markers in
 Isaac Lab.
 
 .. toctree::
@@ -113,3 +122,15 @@ additional resources that help you use Omniverse features in Isaac Lab.
     :maxdepth: 1
 
     master_omniverse
+
+
+Setting up CloudXR Teleoperation
+--------------------------------
+
+This guide explains how to use CloudXR and Apple Vision Pro for immersive streaming and
+teleoperation in Isaac Lab.
+
+.. toctree::
+    :maxdepth: 1
+
+    cloudxr_teleoperation
