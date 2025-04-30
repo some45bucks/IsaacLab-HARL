@@ -93,7 +93,7 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
         if obs_space.shape[0] > max_action_space:
             max_action_space = obs_space.shape[0]
 
-    actions = torch.zeros((args["num_envs"], runner.num_agents, max_action_space), dtype=torch.float64, device="cuda:0")
+    actions = torch.zeros((args["num_envs"], runner.num_agents, max_action_space), dtype=torch.float32, device="cuda:0")
     rnn_states = torch.zeros(
         (
             args["num_envs"],
@@ -101,15 +101,15 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
             runner.recurrent_n,
             runner.rnn_hidden_size,
         ),
-        dtype=torch.float64,
+        dtype=torch.float32,
         device="cuda:0",
     )
     masks = torch.ones(
         (args["num_envs"], runner.num_agents, 1),
-        dtype=torch.float64,
+        dtype=torch.float32,
     )
 
-    total_rewards = torch.zeros((args["num_envs"], runner.num_agents, 1), dtype=torch.float64, device="cuda:0")
+    total_rewards = torch.zeros((args["num_envs"], runner.num_agents, 1), dtype=torch.float32, device="cuda:0")
 
     while simulation_app.is_running():
         with torch.inference_mode():
@@ -128,11 +128,11 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
             print(f"Average reward: {rewards.mean(axis=0).cpu().numpy()}")
 
             dones_env = torch.all(dones, dim=1)
-            masks = torch.ones((args["num_envs"], runner.num_agents, 1), dtype=torch.float64, device="cuda:0")
+            masks = torch.ones((args["num_envs"], runner.num_agents, 1), dtype=torch.float32, device="cuda:0")
             masks[dones_env] = 0.0
             rnn_states[dones_env] = torch.zeros(
                 ((dones_env).sum(), runner.num_agents, runner.recurrent_n, runner.rnn_hidden_size),
-                dtype=torch.float64,
+                dtype=torch.float32,
                 device="cuda:0",
             )
 
