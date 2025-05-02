@@ -1,6 +1,8 @@
-![Isaac Lab](docs/source/_static/isaaclab.jpg)
+![Isaac Lab Harl Integration](docs/source/_static/isaaclab.jpg)
 
----
+# Install
+
+Updates to HARL use in progress...
 
 # Isaac Lab
 
