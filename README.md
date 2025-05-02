@@ -40,12 +40,19 @@ python train.py \
   --task "Isaac-Multi-Agent-Flat-Anymal-C-Direct-v0" \
   --seed 1 \
   --save_interval 10000 \
-  --log_interval 1000 \
+  --log_interval 1 \
   --exp_name "multi_agent_anymal_harl" \
   --num_env_steps 1000000 \
   --algorithm happo \
   --headless
-````
+```
+
+Outputs will be located at `IsaacLab-HARL/scripts/reinforcement_learning/harl/results`, to view the progress in tensorboard run
+
+```bash
+cd IsaacLab-HARL/scripts/reinforcement_learning/harl/results/
+tensorboard --logdir=./
+```
 
 ## Parameter Descriptions
 
@@ -83,6 +90,10 @@ IsaacLab-HARL/source/isaaclab_tasks/isaaclab_tasks/direct
 * `Isaac-Anymal-H1-Piano-Direct-v0`
 * `Isaac-Anymal-H1-Push-Direct-v0`
 * `Isaac-Anymal-H1-Surf-Flat-Direct`
+
+
+## Playing an Environment
+
 
 
 # Isaac Lab
