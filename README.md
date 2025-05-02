@@ -1,4 +1,4 @@
-![Isaac Lab Harl Integration](docs/source/_static/isaaclab.jpg)
+![image](https://github.com/user-attachments/assets/dc883271-761c-4342-9b0b-15c584b33127)
 
 # Install
 
