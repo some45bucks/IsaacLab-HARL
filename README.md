@@ -2,7 +2,88 @@
 
 # Install
 
-Updates to HARL use in progress...
+Install the conda environment 
+
+```
+./isaaclab.sh -c
+```
+
+Activate the conda environment and install other dependencies.
+```
+conda activate env_isaaclab
+./isaaclab.sh -i
+```
+
+This will automatically install the modified HARL package that works with isaaclab that we developed located at [https://github.com/some45bucks/HARL](https://github.com/some45bucks/HARL).  
+
+Install isaacsim 
+
+```
+pip install isaacsim[all]==4.5.0 --extra-index-url https://pypi.nvidia.com
+pip install isaacsim[extscache]==4.5.0 --extra-index-url https://pypi.nvidia.com
+```
+
+
+# Multi-Agent Training with HARL
+
+This command runs training on the multi-agent ANYmal environment using the HAPPO (Heterogeneous Agent Proximal Policy Optimization) algorithm in IsaacLab-HARL.
+
+## Command
+
+```bash
+cd IsaacLab-HARL/scripts/reinforcement_learning/harl
+python train.py \
+  --video \
+  --video_length 500 \
+  --video_interval 20000 \
+  --num_envs 64 \
+  --task "Isaac-Multi-Agent-Flat-Anymal-C-Direct-v0" \
+  --seed 1 \
+  --save_interval 10000 \
+  --log_interval 1000 \
+  --exp_name "multi_agent_anymal_harl" \
+  --num_env_steps 1000000 \
+  --algorithm happo \
+  --headless
+````
+
+## Parameter Descriptions
+
+* `--video`: Enables recording of videos during training episodes.
+* `--video_length`: Number of environment steps per recorded video (default: 500).
+* `--video_interval`: Number of environment steps between video recordings (default: 20000).
+* `--num_envs`: Number of parallel simulation environments to run (here, 64).
+* `--task`: Specifies the training task/environment.
+* `--seed`: Random seed for reproducibility (here, 1).
+* `--save_interval`: Frequency (in environment steps) at which the model is saved (here, every 10000 steps).
+* `--log_interval`: Frequency (in environment steps) at which logs are recorded (here, every 1000 steps).
+* `--exp_name`: Name identifier for the experiment, used for organizing output files and logs.
+* `--num_env_steps`: Total number of environment steps for training (here, 1,000,000).
+* `--algorithm`: Specifies the RL algorithm to use.
+* `--headless`: Runs the simulation without rendering.
+
+## Available Algorithms
+
+* `happo`: Heterogeneous Agent Proximal Policy Optimization
+* `hatrpo`: Heterogeneous Agent Trust Region Policy Optimization
+* `haa2c`: Heterogeneous Agent Advantage Actor-Critic
+* `mappo`: Multi-Agent Proximal Policy Optimization (shared policy)
+* `mappo_unshare`: Multi-Agent Proximal Policy Optimization (unshared policy)
+
+## Available Tasks
+
+These environments are located in:
+
+```
+IsaacLab-HARL/source/isaaclab_tasks/isaaclab_tasks/direct
+```
+
+* `Isaac-Multi-Agent-Flat-Anymal-C-Direct-v0`
+* `Isaac-Anymal-H1-Ball-Direct-v0`
+* `Isaac-Anymal-H1-Piano-Direct-v0`
+* `Isaac-Anymal-H1-Push-Direct-v0`
+* `Isaac-Anymal-H1-Surf-Flat-Direct`
+
 
 # Isaac Lab
 
