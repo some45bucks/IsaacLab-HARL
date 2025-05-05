@@ -62,7 +62,7 @@ tensorboard --logdir=./
 * `--num_envs`: Number of parallel simulation environments to run (here, 64).
 * `--task`: Specifies the training task/environment.
 * `--seed`: Random seed for reproducibility (here, 1).
-* `--save_interval`: Frequency (in environment steps) at which the model is saved (here, every 10000 steps).
+* `--save_interval`: Frequency (in episode steps) at which the model is saved.
 * `--log_interval`: Frequency (in environment steps) at which logs are recorded (here, every 1000 steps).
 * `--exp_name`: Name identifier for the experiment, used for organizing output files and logs.
 * `--num_env_steps`: Total number of environment steps for training (here, 1,000,000).
