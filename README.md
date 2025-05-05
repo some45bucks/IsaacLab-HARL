@@ -1,4 +1,4 @@
-![Isaac Lab Harl Integration](docs/source/_static/isaaclab.jpg)
+![image](https://github.com/user-attachments/assets/dc883271-761c-4342-9b0b-15c584b33127)
 
 # Install
 
@@ -32,19 +32,7 @@ This command runs training on the multi-agent ANYmal environment using the HAPPO
 
 ```bash
 cd IsaacLab-HARL/scripts/reinforcement_learning/harl
-python train.py \
-  --video \
-  --video_length 500 \
-  --video_interval 20000 \
-  --num_envs 64 \
-  --task "Isaac-Multi-Agent-Flat-Anymal-C-Direct-v0" \
-  --seed 1 \
-  --save_interval 10000 \
-  --log_interval 1 \
-  --exp_name "multi_agent_anymal_harl" \
-  --num_env_steps 1000000 \
-  --algorithm happo \
-  --headless
+python train.py --video --video_length 500 --video_interval 20000 --num_envs 64 --task "Isaac-Multi-Agent-Flat-Anymal-C-Direct-v0" --seed 1 --save_interval 10000 --log_interval 1 --exp_name "multi_agent_anymal_harl" --num_env_steps 1000000 --algorithm happo --headless
 ```
 
 Outputs will be located at `IsaacLab-HARL/scripts/reinforcement_learning/harl/results`, to view the progress in tensorboard run
