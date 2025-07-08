@@ -57,6 +57,11 @@ class LocomotionVelocityEnv(DirectMARLEnv):
             for agent, action_space in self.cfg.action_spaces.items()
         }
 
+        self.prev_actions = {
+            agent: torch.zeros(self.num_envs, action_space, device=self.device)
+            for agent, action_space in self.cfg.action_spaces.items()
+        }
+
         self.action_scale = self.cfg.action_scale
         self.joint_gears = torch.tensor(self.cfg.joint_gears, dtype=torch.float32, device=self.sim.device)
         self.motor_effort_ratio = torch.ones_like(self.joint_gears, device=self.sim.device)
@@ -156,6 +161,7 @@ class LocomotionVelocityEnv(DirectMARLEnv):
         light_cfg.func("/World/Light", light_cfg)
 
     def _pre_physics_step(self, actions: torch.Tensor):
+        self.prev_actions["robot_0"] = self.actions["robot_0"].clone()
         self.actions["robot_0"] = actions["robot_0"].clone()
 
     def _apply_action(self):
@@ -190,10 +196,12 @@ class LocomotionVelocityEnv(DirectMARLEnv):
             self.robots["robot_0"],
             self._commands,
             self.actions["robot_0"],
+            self.prev_actions["robot_0"],
             self.dof_vel,
             self.dof_pos_scaled,
             self.potentials,
             self.prev_potentials,
+            self.cfg.smoothness_cost_scale,
             self.cfg.actions_cost_scale,
             self.cfg.energy_cost_scale,
             self.cfg.dof_vel_scale,
@@ -229,12 +237,13 @@ class LocomotionVelocityEnv(DirectMARLEnv):
 
         self._compute_intermediate_values()
 
-        self.extras = dict()
+        extras = dict()
         for key in self._episode_sums.keys():
             episodic_sum_avg = torch.mean(self._episode_sums[key][env_ids])
-            self.extras["Episode_Reward/" + key] = episodic_sum_avg / self.max_episode_length_s
+            extras["Episode_Reward/" + key] = episodic_sum_avg / self.max_episode_length
             self._episode_sums[key][env_ids] = 0.0
         self.extras["log"] = dict()
+        self.extras["log"].update(extras)
 
 
 
@@ -243,17 +252,22 @@ def compute_rewards(
     robot: Articulation,
     commands: torch.Tensor,
     actions: torch.Tensor,
+    prev_actions: torch.Tensor,
     dof_vel: torch.Tensor,
     dof_pos_scaled: torch.Tensor,
     potentials: torch.Tensor,
     prev_potentials: torch.Tensor,
+    smoothness_cost_scale: float,
     actions_cost_scale: float,
     energy_cost_scale: float,
     dof_vel_scale: float,
     alive_reward_scale: float,
     motor_effort_ratio: torch.Tensor,
 ):
-    
+    # Requires storing prev_actions
+    action_delta = actions - prev_actions
+    smoothness_penalty = torch.sum(action_delta ** 2, dim=-1)
+
     # linear velocity tracking
     lin_vel_error = torch.sum(torch.square(commands[:, :2] - robot.data.root_lin_vel_b[:, :2]), dim=1)
     lin_vel_error_mapped = torch.exp(-lin_vel_error / 0.25)
@@ -283,6 +297,7 @@ def compute_rewards(
         - actions_cost_scale * actions_cost
         - energy_cost_scale * electricity_cost
         - dof_at_limit_cost
+        - smoothness_cost_scale * smoothness_penalty
     )
     return total_reward
 

@@ -84,6 +84,7 @@ class H1VelocityEnvCfg(DirectMARLEnvCfg):
     up_weight: float = 0.1
 
     energy_cost_scale: float = 0.05
+    smoothness_cost_scale: float = 0.05
     actions_cost_scale: float = 0.01
     alive_reward_scale: float = 2.0
     dof_vel_scale: float = 0.1
