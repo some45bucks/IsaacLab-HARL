@@ -233,7 +233,17 @@ class LocomotionVelocityEnv(DirectMARLEnv):
         self.robots["robot_0"].write_root_pose_to_sim(default_root_state[:, :7], env_ids)
         self.robots["robot_0"].write_root_velocity_to_sim(default_root_state[:, 7:], env_ids)
         self.robots["robot_0"].write_joint_state_to_sim(joint_pos, joint_vel, None, env_ids)
-        self._commands[env_ids] = torch.zeros_like(self._commands[env_ids]).uniform_(-1.0, 1.0)
+
+        p = torch.zeros(1).uniform_(0, 1.0)
+        v = torch.zeros(1).uniform_(-1.0, 1.0)
+
+        self._commands[env_ids] = torch.zeros_like(self._commands[env_ids])
+        
+        if p < 0.5:
+            self._commands[env_ids, 0] = v
+        else:
+            self._commands[env_ids, 2] = v
+
 
         self._compute_intermediate_values()
 
@@ -297,7 +307,7 @@ def compute_rewards(
         - actions_cost_scale * actions_cost
         - energy_cost_scale * electricity_cost
         - dof_at_limit_cost
-        - smoothness_cost_scale * smoothness_penalty
+        # - smoothness_cost_scale * smoothness_penalty
     )
     return total_reward
 
