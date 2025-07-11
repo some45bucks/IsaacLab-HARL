@@ -420,7 +420,7 @@ class AnymalCMultiAgentBar(DirectMARLEnv):
                 2 * torch.ones(self._commands.shape[0]),
                 3 * torch.ones(self._commands.shape[0]),
             ],
-            axis=0,
+            dim=0,
         )
 
         bar_pos = self.object.data.body_com_pos_w.squeeze(1).clone()
@@ -447,13 +447,13 @@ class AnymalCMultiAgentBar(DirectMARLEnv):
                     torch.sign(z_commands) * _90,
                     torch.sign(bar_yaw) * _90,
                 ],
-                axis=0,
+                dim=0,
             ),
             torch.tensor([0.0, 1.0, 0.0], device=self.device),
         )
 
         marker_scales = torch.concat(
-            [torch.ones((3 * self._commands.shape[0], 3), device=self.device), scale1, scale2], axis=0
+            [torch.ones((3 * self._commands.shape[0], 3), device=self.device), scale1, scale2], dim=0
         )
 
         marker_locations = torch.concat(
@@ -464,7 +464,7 @@ class AnymalCMultiAgentBar(DirectMARLEnv):
                 bar_pos + offset1,
                 bar_pos + offset2,
             ],
-            axis=0,
+            dim=0,
         )
 
         self.my_visualizer.visualize(
@@ -486,6 +486,7 @@ class AnymalCMultiAgentBar(DirectMARLEnv):
 
         self._draw_markers(bar_commands)
         total_reward = 0
+        all_rewards = {}
         for robot_id, robot in self.robots.items():
             # linear velocity tracking
 
@@ -560,12 +561,18 @@ class AnymalCMultiAgentBar(DirectMARLEnv):
 
             total_reward += curr_reward
 
+            for r, v in rewards.items():
+                if r not in all_rewards:
+                    all_rewards[r] = v
+                else:
+                    all_rewards[r] += v
+
         for robot_id, robot in self.robots.items():
             reward[robot_id] = total_reward / 2
 
         # Logging
-        # for key, value in reward.items():
-        #     self._episode_sums[key] += value
+        for key, value in all_rewards.items():
+            self._episode_sums[key] += (value / self.num_robots)
 
         return reward
 
@@ -663,13 +670,13 @@ class AnymalCMultiAgentBar(DirectMARLEnv):
             robot.write_joint_state_to_sim(joint_pos, joint_vel, None, env_ids)
             # Logging
             extras = dict()
-            for key in self._episode_sums.keys():
-                episodic_sum_avg = torch.mean(self._episode_sums[key][env_ids])
-                extras["Episode_Reward/" + key] = episodic_sum_avg / self.max_episode_length_s
-                self._episode_sums[key][env_ids] = 0.0
-            self.extras["log"] = dict()
-            self.extras["log"].update(extras)
-            extras = dict()
+        for key in self._episode_sums.keys():
+            episodic_sum_avg = torch.mean(self._episode_sums[key][env_ids])
+            extras["Episode_Reward/" + key] = episodic_sum_avg / self.max_episode_length_s
+            self._episode_sums[key][env_ids] = 0.0
+        self.extras["log"] = dict()
+        self.extras["log"].update(extras)
+            # extras = dict()
             # extras["Episode_Termination/base_contact"] = torch.count_nonzero(self.reset_terminated[env_ids]).item()
             # extras["Episode_Termination/time_out"] = torch.count_nonzero(self.reset_time_outs[env_ids]).item()
-            self.extras["log"].update(extras)
+            # self.extras["log"].update(extras)
