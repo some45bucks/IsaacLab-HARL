@@ -301,16 +301,16 @@ class AnymalCMultiAgentBar(DirectMARLEnv):
             for key in [
                 "track_lin_vel_xy_exp",
                 "track_ang_vel_z_exp",
-                "lin_vel_z_l2",
-                "ang_vel_xy_l2",
-                "dof_torques_l2",
-                "dof_acc_l2",
-                "action_rate_l2",
-                "feet_air_time",
-                "undesired_contacts",
-                "flat_orientation_l2",
-                "flat_bar_roll_angle",
-                "bar_fallen_reward",
+                # "lin_vel_z_l2",
+                # "ang_vel_xy_l2",
+                # "dof_torques_l2",
+                # "dof_acc_l2",
+                # "action_rate_l2",
+                # "feet_air_time",
+                # "undesired_contacts",
+                # "flat_orientation_l2",
+                # "flat_bar_roll_angle",
+                # "bar_fallen_reward",
             ]
         }
 
