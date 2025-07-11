@@ -300,13 +300,13 @@ def compute_rewards(
     progress_reward = potentials - prev_potentials
 
     total_reward = (
-        progress_reward
+        # progress_reward
         + lin_vel_error_mapped
         + yaw_rate_error_mapped
         + alive_reward
-        - actions_cost_scale * actions_cost
-        - energy_cost_scale * electricity_cost
-        - dof_at_limit_cost
+        # - actions_cost_scale * actions_cost
+        # - energy_cost_scale * electricity_cost
+        # - dof_at_limit_cost
         # - smoothness_cost_scale * smoothness_penalty
     )
     return total_reward
