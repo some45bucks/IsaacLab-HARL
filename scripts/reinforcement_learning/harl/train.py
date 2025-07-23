@@ -12,7 +12,7 @@ import time
 from isaaclab.app import AppLauncher
 
 parser = argparse.ArgumentParser(description="Train an RL agent with HARL.")
-parser.add_argument("--video", action="store_true", default=True, help="Record videos during training.")
+parser.add_argument("--video", action="store_true", help="Record videos during training.")
 parser.add_argument("--video_length", type=int, default=500, help="Length of the recorded video (in steps).")
 parser.add_argument("--video_interval", type=int, default=20000, help="Interval between video recordings (in steps).")
 parser.add_argument("--num_envs", type=int, default=None, help="Number of environments to simulate.")

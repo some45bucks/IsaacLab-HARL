@@ -288,7 +288,6 @@ class AnymalCMultiAgentBar(DirectMARLEnv):
                         self._commands,
                         robot.data.joint_pos - robot.data.default_joint_pos,
                         robot.data.joint_vel,
-                        # height_datas[robot_id],
                         self.actions[robot_id],
                     )
                     if tensor is not None
@@ -456,11 +455,11 @@ class AnymalCMultiAgentBar(DirectMARLEnv):
             robot.write_root_pose_to_sim(default_root_state[:, :7], env_ids)
             robot.write_root_velocity_to_sim(default_root_state[:, 7:], env_ids)
             robot.write_joint_state_to_sim(joint_pos, joint_vel, None, env_ids)
-            # Logging
-            extras = dict()
+        # Logging
+        extras = dict()
         for key in self._episode_sums.keys():
             episodic_sum_avg = torch.mean(self._episode_sums[key][env_ids])
-            extras["Episode_Reward/" + key] = episodic_sum_avg / self.max_episode_length_s
+            extras["Episode_Reward_s/" + key] = episodic_sum_avg / self.max_episode_length_s
             self._episode_sums[key][env_ids] = 0.0
         self.extras["log"] = dict()
         self.extras["log"].update(extras)
