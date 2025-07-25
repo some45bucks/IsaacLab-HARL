@@ -11,6 +11,8 @@ device:
   cuda_deterministic: True
   # arg to torch.set_num_threads
   torch_threads: 4
+  # if you have multiple GPUs, you can specify which GPU to use
+  gpu_id: 0
 train:
   # number of parallel environments for training data collection
   n_rollout_threads: 20

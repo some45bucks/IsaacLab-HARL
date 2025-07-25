@@ -464,3 +464,4 @@ class AnymalCMultiAgentBar(DirectMARLEnv):
         self.extras["log"] = dict()
         self.extras["log"].update(extras)
 
+
