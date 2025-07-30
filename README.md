@@ -23,6 +23,17 @@ pip install isaacsim[all]==4.5.0 --extra-index-url https://pypi.nvidia.com
 pip install isaacsim[extscache]==4.5.0 --extra-index-url https://pypi.nvidia.com
 ```
 
+download the 3D assets form here:
+[https://usu.box.com/s/af10jukvqp4gun3xx2cjqbd4vsq840ek](https://usu.box.com/s/af10jukvqp4gun3xx2cjqbd4vsq840ek)
+Place the downloaded files into a new folder named `assets` located in the root directory of the project:
+
+```
+IsaacLab-HARL/
+├── assets/
+│   └── <downloaded unzipped files>
+├── README.md
+├── ...
+```
 
 # Multi-Agent Training with HARL
 
