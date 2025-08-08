@@ -5,7 +5,11 @@
 
 from __future__ import annotations
 
+<<<<<<< HEAD
 from isaaclab_assets import H1_CFG # type: ignore
+=======
+from isaaclab_assets import H1_CFG
+>>>>>>> main
 
 import isaaclab.sim as sim_utils
 from isaaclab.assets import ArticulationCfg
@@ -14,7 +18,10 @@ from isaaclab.scene import InteractiveSceneCfg
 from isaaclab.sim import SimulationCfg
 from isaaclab.terrains import TerrainImporterCfg
 from isaaclab.utils import configclass
+<<<<<<< HEAD
 from isaaclab.sensors import ContactSensor, ContactSensorCfg, TiledCamera, TiledCameraCfg
+=======
+>>>>>>> main
 
 from isaaclab_tasks.direct.locomotion.locomotion_velocity_control import LocomotionVelocityEnv
 
@@ -23,7 +30,11 @@ from isaaclab_tasks.direct.locomotion.locomotion_velocity_control import Locomot
 class H1VelocityEnvCfg(DirectMARLEnvCfg):
     # env
     episode_length_s = 15.0
+<<<<<<< HEAD
     decimation = 4
+=======
+    decimation = 2
+>>>>>>> main
     action_scale = 1.0
     action_space = 19
     observation_space = 69
@@ -33,7 +44,12 @@ class H1VelocityEnvCfg(DirectMARLEnvCfg):
     # env
     action_spaces = {f"robot_{i}": 19 for i in range(1)}
     # observation_space = 48
+<<<<<<< HEAD
     observation_spaces = {f"robot_{i}": 30 for i in range(1)}
+=======
+    # observation_space = 48
+    observation_spaces = {f"robot_{i}": 28 for i in range(1)}
+>>>>>>> main
     state_space = 0
     state_spaces = {f"robot_{i}": 0 for i in range(1)}
     possible_agents = ["robot_0"]
@@ -59,9 +75,12 @@ class H1VelocityEnvCfg(DirectMARLEnvCfg):
 
     # robot
     robot_0: ArticulationCfg = H1_CFG.replace(prim_path="/World/envs/env_.*/Robot_0")
+<<<<<<< HEAD
     contact_sensor_0: ContactSensorCfg = ContactSensorCfg(
         prim_path="/World/envs/env_.*/Robot_0/.*_ankle_link", history_length=3, update_period=(1/120), track_air_time=True,
     )
+=======
+>>>>>>> main
     joint_gears: list = [
         50.0,  # left_hip_yaw
         50.0,  # right_hip_yaw
@@ -83,26 +102,37 @@ class H1VelocityEnvCfg(DirectMARLEnvCfg):
         50.0,  # left_elbow
         50.0,  # right_elbow
     ]
+<<<<<<< HEAD
 
     period = 2
     
     # Reward Scales
     gait_weight = 0.5
     feet_slide_weight = -0.2
+=======
+>>>>>>> main
     heading_weight: float = 0.5
     up_weight: float = 0.1
 
     energy_cost_scale: float = 0.05
     smoothness_cost_scale: float = 0.05
     actions_cost_scale: float = 0.01
+<<<<<<< HEAD
     alive_reward_scale: float = 0.15
+=======
+    alive_reward_scale: float = 2.0
+>>>>>>> main
     dof_vel_scale: float = 0.1
 
     death_cost: float = -1.0
     termination_height: float = 0.8
 
+<<<<<<< HEAD
     task_velocity_scale: float = 1.0
     angular_velocity_scale: float = 0.5
+=======
+    angular_velocity_scale: float = 0.25
+>>>>>>> main
     contact_force_scale: float = 0.01
 
 

@@ -10,7 +10,11 @@ Ant locomotion environment.
 import gymnasium as gym
 
 from . import agents
+<<<<<<< HEAD
 from .anymal_c_multi_agent import AnymalCMultiAgentBar, AnymalCMultiAgentFlatEnvCfg, AnymalCMultiAgentRoughEnvCfg
+=======
+from .anymal_c_multi_agent import AnymalCMultiAgentBar, AnymalCMultiAgentFlatEnvCfg
+>>>>>>> main
 
 ##
 # Register Gym environments.
@@ -29,6 +33,7 @@ gym.register(
     },
 )
 
+<<<<<<< HEAD
 gym.register(
     id="Isaac-Multi-Agent-Velocity-Rough-Anymal-C-Direct-v0",
     entry_point="isaaclab_tasks.direct.anymal_c_multi_agent:AnymalCMultiAgentBar",
@@ -41,3 +46,5 @@ gym.register(
         "harl_happo_cfg_entry_point": f"{agents.__name__}:harl_happo_cfg.yaml",
     },
 )
+=======
+>>>>>>> main

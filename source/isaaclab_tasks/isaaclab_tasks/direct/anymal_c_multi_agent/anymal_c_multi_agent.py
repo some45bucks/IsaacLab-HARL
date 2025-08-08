@@ -183,6 +183,7 @@ class AnymalCMultiAgentFlatEnvCfg(DirectMARLEnvCfg):
         ),  # started the bar lower
     )
 
+<<<<<<< HEAD
     # # we add a height scanner for perceptive locomotion
     # height_scanner_0 = RayCasterCfg(
     #     prim_path="/World/envs/env_.*/Robot_0/base",
@@ -279,6 +280,23 @@ class AnymalCMultiAgentBar(DirectMARLEnv):
 
     def __init__(
         self, cfg: AnymalCMultiAgentFlatEnvCfg | AnymalCMultiAgentRoughEnvCfg, render_mode: str | None = None, **kwargs
+=======
+    # reward scales
+    lin_vel_reward_scale = 1.0
+    yaw_rate_reward_scale = 1.0
+
+    bar_z_min_pos = .6
+
+    anymal_min_z_pos = 0.1
+    max_bar_roll_angle_rad = 1
+
+
+class AnymalCMultiAgentBar(DirectMARLEnv):
+    cfg: AnymalCMultiAgentFlatEnvCfg
+
+    def __init__(
+        self, cfg: AnymalCMultiAgentFlatEnvCfg, render_mode: str | None = None, **kwargs
+>>>>>>> main
     ):
         super().__init__(cfg, render_mode, **kwargs)
         # Joint position command (deviation from default joint positions)
@@ -292,7 +310,10 @@ class AnymalCMultiAgentBar(DirectMARLEnv):
             for agent, action_space in self.cfg.action_spaces.items()
         }
         # X/Y linear velocity and yaw angular velocity commands
+<<<<<<< HEAD
         # self._commands = {agent : torch.zeros(self.num_envs, 3, device=self.device) for agent in self.cfg.possible_agents}
+=======
+>>>>>>> main
         self._commands = torch.zeros(self.num_envs, 3, device=self.device)
 
         # Logging
@@ -301,6 +322,7 @@ class AnymalCMultiAgentBar(DirectMARLEnv):
             for key in [
                 "track_lin_vel_xy_exp",
                 "track_ang_vel_z_exp",
+<<<<<<< HEAD
                 "lin_vel_z_l2",
                 "ang_vel_xy_l2",
                 "dof_torques_l2",
@@ -311,6 +333,8 @@ class AnymalCMultiAgentBar(DirectMARLEnv):
                 "flat_orientation_l2",
                 "flat_bar_roll_angle",
                 "bar_fallen_reward",
+=======
+>>>>>>> main
             ]
         }
 
@@ -340,8 +364,11 @@ class AnymalCMultiAgentBar(DirectMARLEnv):
             self.scene.articulations[f"robot_{i}"] = self.robots[f"robot_{i}"]
             self.contact_sensors[f"robot_{i}"] = ContactSensor(self.cfg.__dict__["contact_sensor_" + str(i)])
             self.scene.sensors[f"robot_{i}"] = self.contact_sensors[f"robot_{i}"]
+<<<<<<< HEAD
             # self.height_scanners[f"robot_{i}"] = RayCaster(self.cfg.__dict__["height_scanner_" + str(i)])
             # self.scene.sensors[f"robot_{i}"] = self.height_scanners[f"robot_{i}"]
+=======
+>>>>>>> main
 
         self.cfg.terrain.num_envs = self.scene.cfg.num_envs
         self.cfg.terrain.env_spacing = self.scene.cfg.env_spacing
@@ -355,8 +382,12 @@ class AnymalCMultiAgentBar(DirectMARLEnv):
 
     def _pre_physics_step(self, actions: torch.Tensor):
         # We need to process the actions for each scene independently
+<<<<<<< HEAD
         # self.processed_actions = actions.clone() 
         self.processed_actions = {}
+=======
+        self.processed_actions = copy.deepcopy(actions)
+>>>>>>> main
         for robot_id, robot in self.robots.items():
             self.actions[robot_id] = actions[robot_id].clone()
             self.processed_actions[robot_id] = (
@@ -369,6 +400,7 @@ class AnymalCMultiAgentBar(DirectMARLEnv):
 
     def _get_observations(self) -> dict:
         self.previous_actions = copy.deepcopy(self.actions)
+<<<<<<< HEAD
         # height_datas = {}
         # for robot_id, robot in self.robots.items():
         #     height_data = None
@@ -382,6 +414,11 @@ class AnymalCMultiAgentBar(DirectMARLEnv):
 
         # self.my_visualizer.visualize(marker_locations+self._commands,marker_orientations)
 
+=======
+
+        obs = {}
+
+>>>>>>> main
         for robot_id, robot in self.robots.items():
             obs[robot_id] = torch.cat(
                 [
@@ -393,7 +430,10 @@ class AnymalCMultiAgentBar(DirectMARLEnv):
                         self._commands,
                         robot.data.joint_pos - robot.data.default_joint_pos,
                         robot.data.joint_vel,
+<<<<<<< HEAD
                         # height_datas[robot_id],
+=======
+>>>>>>> main
                         self.actions[robot_id],
                     )
                     if tensor is not None
@@ -473,6 +513,7 @@ class AnymalCMultiAgentBar(DirectMARLEnv):
         )
 
     def _get_rewards(self) -> dict:
+<<<<<<< HEAD
         reward = {}
 
         self._get_timeouts() * self.cfg.finished_episode_reward
@@ -588,6 +629,34 @@ class AnymalCMultiAgentBar(DirectMARLEnv):
     #         all_died.append(died)
 
     #     return torch.any(torch.cat(all_dones), dim=0), torch.any(torch.cat(all_died), dim=0)
+=======
+        bar_commands = torch.stack([-self._commands[:, 1], self._commands[:, 0], self._commands[:, 2]]).t()
+
+        self._draw_markers(bar_commands)
+
+        # xy linear velocity tracking
+        lin_vel_error = torch.sum(
+            torch.square(bar_commands[:, :2] - self.object.data.root_com_lin_vel_b[:, :2]), dim=1
+        )
+        lin_vel_error_mapped = torch.exp(-lin_vel_error)
+
+        # yaw rate tracking
+        yaw_rate_error = torch.square(self._commands[:, 2] - self.object.data.root_com_ang_vel_b[:, 2])
+        yaw_rate_error_mapped = torch.exp(-yaw_rate_error)
+
+        rewards = {
+            "track_lin_vel_xy_exp": lin_vel_error_mapped * self.cfg.lin_vel_reward_scale * self.step_dt,
+            "track_ang_vel_z_exp": yaw_rate_error_mapped * self.cfg.yaw_rate_reward_scale * self.step_dt,
+        }
+        reward = torch.sum(torch.stack(list(rewards.values())), dim=0)
+
+        # Logging
+        for key, value in rewards.items():
+            self._episode_sums[key] += value
+
+        return {"robot_0":reward, "robot_1":reward}
+
+>>>>>>> main
     def _get_anymal_fallen(self):
         agent_dones = []
 
@@ -610,11 +679,14 @@ class AnymalCMultiAgentBar(DirectMARLEnv):
         return self.episode_length_buf >= self.max_episode_length - 1
 
     def _get_dones(self) -> tuple[dict, dict]:
+<<<<<<< HEAD
         # y_euler_angle = self.get_y_euler_from_quat(self.object.data.root_com_quat_w)
         # if the angle of the bar > pi/64 reset
         # bar_angle_dones = (torch.abs(y_euler_angle) > 0.05)
         # check if the bar has fallen on the ground
 
+=======
+>>>>>>> main
         time_out = self._get_timeouts()
         anymal_fallen = self._get_anymal_fallen()
         bar_fallen = self._get_bar_fallen()
@@ -631,6 +703,7 @@ class AnymalCMultiAgentBar(DirectMARLEnv):
         self.object.write_root_state_to_sim(object_default_state, env_ids)
         self.object.reset(env_ids)
 
+<<<<<<< HEAD
         # Joint position command (deviation from default joint positions)
         for agent, action_space in self.cfg.action_spaces.items():
             self.actions[agent][env_ids] = torch.zeros(env_ids.shape[0], action_space, device=self.device)
@@ -650,6 +723,13 @@ class AnymalCMultiAgentBar(DirectMARLEnv):
         self._commands[env_ids] = torch.zeros_like(self._commands[env_ids]).uniform_(-1.0, 1.0)
         # self._commands[:,0] = 1
         # self._commands[:, 2] = 0
+=======
+        for agent, _ in self.cfg.action_spaces.items():
+            self.actions[agent][env_ids] = 0.0
+            self.previous_actions[agent][env_ids] = 0.0
+
+        self._commands[env_ids] = torch.zeros_like(self._commands[env_ids]).uniform_(-1.0, 1.0)
+>>>>>>> main
 
         for _, robot in self.robots.items():
             if env_ids is None or len(env_ids) == self.num_envs:
@@ -669,6 +749,7 @@ class AnymalCMultiAgentBar(DirectMARLEnv):
             robot.write_root_pose_to_sim(default_root_state[:, :7], env_ids)
             robot.write_root_velocity_to_sim(default_root_state[:, 7:], env_ids)
             robot.write_joint_state_to_sim(joint_pos, joint_vel, None, env_ids)
+<<<<<<< HEAD
             # Logging
             extras = dict()
         for key in self._episode_sums.keys():
@@ -681,3 +762,15 @@ class AnymalCMultiAgentBar(DirectMARLEnv):
             # extras["Episode_Termination/base_contact"] = torch.count_nonzero(self.reset_terminated[env_ids]).item()
             # extras["Episode_Termination/time_out"] = torch.count_nonzero(self.reset_time_outs[env_ids]).item()
             # self.extras["log"].update(extras)
+=======
+        # Logging
+        extras = dict()
+        for key in self._episode_sums.keys():
+            episodic_sum_avg = torch.mean(self._episode_sums[key][env_ids])
+            extras["Episode_Reward_s/" + key] = episodic_sum_avg / self.max_episode_length_s
+            self._episode_sums[key][env_ids] = 0.0
+        self.extras["log"] = dict()
+        self.extras["log"].update(extras)
+
+
+>>>>>>> main

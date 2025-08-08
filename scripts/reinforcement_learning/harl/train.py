@@ -23,7 +23,10 @@ parser.add_argument("--log_interval", type=int, default=None, help="How often to
 parser.add_argument("--exp_name", type=str, default="test", help="Name of the Experiment")
 parser.add_argument("--num_env_steps", type=int, default=None, help="RL Policy training iterations.")
 parser.add_argument("--dir", type=str, default=None, help="folder with trained models")
+<<<<<<< HEAD
 parser.add_argument("--debug", action="store_true", help="whether to run in debug mode for visualization")
+=======
+>>>>>>> main
 
 parser.add_argument(
     "--algorithm",
@@ -35,13 +38,20 @@ parser.add_argument(
         "haa2c",
         "mappo",
         "mappo_unshare",
+<<<<<<< HEAD
         "happo_adv"
+=======
+>>>>>>> main
     ],
     help="Algorithm name. Choose from: happo, hatrpo, haa2c, mappo, and mappo_unshare.",
 )
 
 # append AppLauncher cli args
+<<<<<<< HEAD
 AppLauncher.add_app_launcher_args(parser)   
+=======
+AppLauncher.add_app_launcher_args(parser)
+>>>>>>> main
 # parse the arguments
 args_cli, hydra_args = parser.parse_known_args()
 # always enable cameras to record video
@@ -94,7 +104,11 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     env_args["config"] = env_cfg
     hms_time = time.strftime("%Y-%m-%d-%H-%M-%S", time.localtime())
     env_args["video_settings"] = {
+<<<<<<< HEAD
         "video": True if args["video"] else False,
+=======
+        "video": args_cli.video,
+>>>>>>> main
         "video_length": args["video_length"],
         "video_interval": args["video_interval"],
         "log_dir": os.path.join(
@@ -108,10 +122,13 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
         ),
     }
 
+<<<<<<< HEAD
     env_args["headless"] = args["headless"]
     env_args["debug"] = args["debug"]
 
 
+=======
+>>>>>>> main
     # create runner
 
     runner = RUNNER_REGISTRY[args["algo"]](args, algo_args, env_args)
@@ -120,5 +137,9 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
 
 
 if __name__ == "__main__":
+<<<<<<< HEAD
     main() # type: ignore
+=======
+    main()
+>>>>>>> main
     simulation_app.close()

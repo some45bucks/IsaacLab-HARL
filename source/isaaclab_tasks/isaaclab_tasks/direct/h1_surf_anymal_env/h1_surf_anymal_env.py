@@ -349,6 +349,7 @@ class HeterogeneousMultiAgentSurf(DirectMARLEnv):
             key: torch.zeros(self.num_envs, dtype=torch.float32, device=self.device)
             for key in [
                 "track_lin_vel_xy_exp",
+<<<<<<< HEAD
                 "track_ang_vel_z_exp",
                 "lin_vel_z_l2",
                 "ang_vel_xy_l2",
@@ -359,6 +360,18 @@ class HeterogeneousMultiAgentSurf(DirectMARLEnv):
                 "undesired_contacts",
                 "flat_orientation_l2",
                 "flat_bar_roll_angle",
+=======
+                # "track_ang_vel_z_exp",
+                # "lin_vel_z_l2",
+                # "ang_vel_xy_l2",
+                # "dof_torques_l2",
+                # "dof_acc_l2",
+                # "action_rate_l2",
+                # "feet_air_time",
+                # "undesired_contacts",
+                # "flat_orientation_l2",
+                # "flat_bar_roll_angle",
+>>>>>>> main
             ]
         }
 
@@ -700,6 +713,7 @@ class HeterogeneousMultiAgentSurf(DirectMARLEnv):
         mean_vel = torch.mean(all_vectors, dim=0)
 
         self._draw_markers(bar_commands)
+<<<<<<< HEAD
 
         for robot_id, _ in self.robots.items():
             # linear velocity tracking
@@ -712,6 +726,17 @@ class HeterogeneousMultiAgentSurf(DirectMARLEnv):
             curr_reward = torch.sum(torch.stack(list(rewards.values())), dim=0)
 
             reward[robot_id] = curr_reward
+=======
+        lin_vel_error = torch.sum(torch.square(bar_commands[:, :2] - mean_vel), dim=1)
+        lin_vel_error_mapped = torch.exp(-lin_vel_error)
+
+        final_reward = lin_vel_error_mapped * self.cfg.lin_vel_reward_scale * self.step_dt
+
+        self._episode_sums["track_lin_vel_xy_exp"] += final_reward
+
+        for robot_id, _ in self.robots.items():
+            reward[robot_id] = final_reward / self.num_robots
+>>>>>>> main
 
         return reward
 
@@ -727,7 +752,10 @@ class HeterogeneousMultiAgentSurf(DirectMARLEnv):
 
     #     return torch.any(torch.cat(all_dones), dim=0), torch.any(torch.cat(all_died), dim=0)
 
+<<<<<<< HEAD
     # TODO: Implement a dones function that handles multiple robots
+=======
+>>>>>>> main
     def _get_dones(self) -> tuple[dict, dict]:
         self._compute_intermediate_values()
         time_out = self.episode_length_buf >= self.max_episode_length - 1
@@ -747,9 +775,12 @@ class HeterogeneousMultiAgentSurf(DirectMARLEnv):
 
         self._halfway_switch_ready[half_time_out] = torch.zeros_like(self._halfway_switch_ready[half_time_out])
 
+<<<<<<< HEAD
         # dones = anymal_fallen
 
         # return {key:torch.zeros_like(time_out) for key in self.robots.keys()}, {key:torch.zeros_like(dones) for key in self.robots.keys()}
+=======
+>>>>>>> main
         return {key: time_out for key in self.robots.keys()}, {key: dones for key in self.robots.keys()}
 
     def _reset_idx(self, env_ids: torch.Tensor | None):

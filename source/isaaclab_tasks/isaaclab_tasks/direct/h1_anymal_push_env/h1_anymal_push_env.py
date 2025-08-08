@@ -317,6 +317,18 @@ class HeterogeneousPushMultiAgent(DirectMARLEnv):
             for key in [
                 "track_lin_vel_xy_exp",
                 "track_ang_vel_z_exp",
+<<<<<<< HEAD
+=======
+                "lin_vel_z_l2",
+                "ang_vel_xy_l2",
+                "dof_torques_l2",
+                "dof_acc_l2",
+                "action_rate_l2",
+                "feet_air_time",
+                "undesired_contacts",
+                "flat_orientation_l2",
+                "flat_bar_roll_angle",
+>>>>>>> main
             ]
         }
 
@@ -373,6 +385,14 @@ class HeterogeneousPushMultiAgent(DirectMARLEnv):
                 self.contact_sensors[f"robot_{i}"] = ContactSensor(self.cfg.__dict__["contact_sensor_" + str(i)])
                 self.scene.sensors[f"robot_{i}"] = self.contact_sensors[f"robot_{i}"]
 
+<<<<<<< HEAD
+=======
+            # height_scanner_id = "height_scanner_" + str(i)
+            # if height_scanner_id in self.cfg.__dict__:
+            #     self.height_scanners[f"robot_{i}"] = RayCaster(self.cfg.__dict__["height_scanner_" + str(i)])
+            #     self.scene.sensors[f"robot_{i}"] = self.height_scanners[f"robot_{i}"]
+
+>>>>>>> main
         self.cfg.terrain.num_envs = self.scene.cfg.num_envs
         self.cfg.terrain.env_spacing = self.scene.cfg.env_spacing
         self._terrain = self.cfg.terrain.class_type(self.cfg.terrain)
@@ -462,6 +482,18 @@ class HeterogeneousPushMultiAgent(DirectMARLEnv):
 
     def _get_observations(self) -> dict:
         self.previous_actions = copy.deepcopy(self.actions)
+<<<<<<< HEAD
+=======
+        # height_datas = {}
+        # for robot_id, robot in self.robots.items():
+        #     height_data = None
+        #     # if isinstance(self.cfg, HeterogeneousPushMultiAgentWalkingRoughEnvCfg):
+        #     if robot_id in self.height_scanners:
+        #         height_data = (
+        #             self.height_scanners[robot_id].data.pos_w[:, 2].unsqueeze(1) - self.height_scanners[robot_id].data.ray_hits_w[..., 2] - 0.5
+        #         ).clip(-1.0, 1.0)
+        #         height_datas[robot_id] = (height_data)
+>>>>>>> main
 
         obs = {}
 
@@ -505,6 +537,11 @@ class HeterogeneousPushMultiAgent(DirectMARLEnv):
             ),
             dim=-1,
         )
+<<<<<<< HEAD
+=======
+        # obs = torch.cat(obs, dim=0)
+        # observations = {"policy": obs}
+>>>>>>> main
         return obs
 
     def get_y_euler_from_quat(self, quaternion):
@@ -589,6 +626,7 @@ class HeterogeneousPushMultiAgent(DirectMARLEnv):
         bar_commands = torch.stack([-self._commands[:, 1], self._commands[:, 0], self._commands[:, 2]]).t()
         self._draw_markers(bar_commands)
         obj_xy_vel = self.object.data.root_com_lin_vel_b[:, :2]
+<<<<<<< HEAD
 
         # linear velocity tracking
         lin_vel_error = torch.sum(torch.square(bar_commands[:, :2] - obj_xy_vel), dim=1)  # changing this to the bar
@@ -608,6 +646,42 @@ class HeterogeneousPushMultiAgent(DirectMARLEnv):
             self._episode_sums[key] += val
 
         return {"robot_0": reward, "robot_1": reward}
+=======
+        # obj_ang_vel = self.object.data.root_com_lin_vel_b[:, 2]
+
+        for robot_id, _ in self.robots.items():
+            # linear velocity tracking
+            lin_vel_error = torch.sum(torch.square(bar_commands[:, :2] - obj_xy_vel), dim=1)  # changing this to the bar
+            lin_vel_error_mapped = torch.exp(-lin_vel_error)
+
+            # angular velocity tracking
+            yaw_rate_error = torch.square(self._commands[:, 2] - self.object.data.root_com_ang_vel_b[:, 2])
+            yaw_rate_error_mapped = torch.exp(-yaw_rate_error)
+
+            rewards = {
+                "track_lin_vel_xy_exp": lin_vel_error_mapped * self.cfg.lin_vel_reward_scale * self.step_dt,
+                "track_ang_vel_z_exp": yaw_rate_error_mapped * self.cfg.yaw_rate_reward_scale * self.step_dt,
+            }
+            curr_reward = torch.sum(torch.stack(list(rewards.values())), dim=0)
+
+            reward[robot_id] = curr_reward
+
+        return reward
+
+    # def _get_dones(self) -> tuple[torch.Tensor, torch.Tensor]:
+    #     all_dones = {}
+    #     all_died = []
+    #     for i in range(self.num_robots):
+    #         time_out = self.episode_length_buf >= self.max_episode_length - 1
+    #         net_contact_forces = self.contact_sensors[i].data.net_forces_w_history
+    #         died = torch.any(torch.max(torch.norm(net_contact_forces[:, :, self.base_ids[i]], dim=-1), dim=1)[0] > 1.0, dim=1)
+    #         all_dones.append(time_out)
+    #         all_died.append(died)
+
+    #     return torch.any(torch.cat(all_dones), dim=0), torch.any(torch.cat(all_died), dim=0)
+
+    # TODO: Implement a dones function that handles multiple robots
+>>>>>>> main
 
     def _get_too_far_away(self):
         anymal_pos = self.robots["robot_0"].data.body_com_pos_w[:, 0, :]
@@ -633,6 +707,13 @@ class HeterogeneousPushMultiAgent(DirectMARLEnv):
         too_far = self._get_too_far_away()
         dones = torch.logical_or(h1_died, anymal_fallen)
         dones = torch.logical_or(dones, too_far)
+<<<<<<< HEAD
+=======
+
+        # dones = anymal_fallen
+
+        # return {key:torch.zeros_like(time_out) for key in self.robots.keys()}, {key:torch.zeros_like(dones) for key in self.robots.keys()}
+>>>>>>> main
         return {key: time_out for key in self.robots.keys()}, {key: dones for key in self.robots.keys()}
 
     def _reset_idx(self, env_ids: torch.Tensor | None):
@@ -640,11 +721,15 @@ class HeterogeneousPushMultiAgent(DirectMARLEnv):
         object_default_state = self.object.data.default_root_state.clone()[env_ids]
         object_default_state[:, 0:3] = object_default_state[:, 0:3] + self.scene.env_origins[env_ids]
         self.object.write_root_state_to_sim(object_default_state, env_ids)
+<<<<<<< HEAD
         self.object.reset(env_ids)
 
         if len(env_ids) == self.num_envs:
             # Spread out the resets to avoid spikes in training when many environments reset at a similar time
             self.episode_length_buf[:] = torch.randint_like(self.episode_length_buf, high=int(self.max_episode_length))
+=======
+        # self.object.reset(env_ids)
+>>>>>>> main
 
         # Joint position command (deviation from default joint positions)
         for agent, action_space in self.cfg.action_spaces.items():
@@ -652,14 +737,51 @@ class HeterogeneousPushMultiAgent(DirectMARLEnv):
             self.previous_actions[agent][env_ids] = torch.zeros(env_ids.shape[0], action_space, device=self.device)
 
         # X/Y linear velocity and yaw angular velocity commands
+<<<<<<< HEAD
         self._commands[env_ids] = torch.zeros_like(self._commands[env_ids]).uniform_(-1.0, 1.0)
         self._commands[env_ids, 0] = torch.zeros_like(self._commands[env_ids, 0]).uniform_(0.5, 1.0)
 
+=======
+        # command = torch.zeros(self.num_envs, 3, device=self.device).uniform_(-1.0, 1.0)
+        # command[:, 2] = 0.0
+        # command[:, 1] = 0.0
+        # command[:, 0] = 1.0
+        self._commands[env_ids] = torch.zeros_like(self._commands[env_ids]).uniform_(-1.0, 1.0)
+        self._commands[env_ids, 0] = torch.zeros_like(self._commands[env_ids, 0]).uniform_(0.5, 1.0)
+
+        # reset idx for h1 #
+        if env_ids is None or len(env_ids) == self.num_envs:
+            env_ids = self.robots["robot_1"]._ALL_INDICES
+        self.robots["robot_1"].reset(env_ids)
+
+        joint_pos = self.robots["robot_1"].data.default_joint_pos[env_ids]
+        joint_vel = self.robots["robot_1"].data.default_joint_vel[env_ids]
+        default_root_state = self.robots["robot_1"].data.default_root_state[env_ids]
+        default_root_state[:, :3] += self.scene.env_origins[env_ids]
+
+        self.robots["robot_1"].write_root_link_pose_to_sim(default_root_state[:, :7], env_ids)
+        self.robots["robot_1"].write_root_com_velocity_to_sim(default_root_state[:, 7:], env_ids)
+        self.robots["robot_1"].write_joint_state_to_sim(joint_pos, joint_vel, None, env_ids)
+
+        to_target = self.targets[env_ids] - default_root_state[:, :3]
+        to_target[:, 2] = 0.0
+        self.potentials[env_ids] = -torch.norm(to_target, p=2, dim=-1) / self.cfg.sim.dt
+
+        self._compute_intermediate_values()
+        # reset idx for h1 #
+
+>>>>>>> main
         # reset idx for anymal #
         robot = self.robots["robot_0"]
         if env_ids is None or len(env_ids) == self.num_envs:
             env_ids = robot._ALL_INDICES
         robot.reset(env_ids)
+<<<<<<< HEAD
+=======
+        if len(env_ids) == self.num_envs:
+            # Spread out the resets to avoid spikes in training when many environments reset at a similar time
+            self.episode_length_buf[:] = torch.randint_like(self.episode_length_buf, high=int(self.max_episode_length))
+>>>>>>> main
 
         joint_pos = robot.data.default_joint_pos[env_ids]
         joint_vel = robot.data.default_joint_vel[env_ids]
@@ -673,12 +795,20 @@ class HeterogeneousPushMultiAgent(DirectMARLEnv):
         if env_ids is None or len(env_ids) == self.num_envs:
             env_ids = robot._ALL_INDICES
         robot.reset(env_ids)
+<<<<<<< HEAD
 
         # Reset robot state
         to_target = self.targets[env_ids] - default_root_state[:, :3]
         to_target[:, 2] = 0.0
         self.potentials[env_ids] = -torch.norm(to_target, p=2, dim=-1) / self.cfg.sim.dt
         self._compute_intermediate_values()
+=======
+        if len(env_ids) == self.num_envs:
+            # Spread out the resets to avoid spikes in training when many environments reset at a similar time
+            self.episode_length_buf[:] = torch.randint_like(self.episode_length_buf, high=int(self.max_episode_length))
+
+        # Reset robot state
+>>>>>>> main
         joint_pos = robot.data.default_joint_pos[env_ids]
         joint_vel = robot.data.default_joint_vel[env_ids]
         default_root_state = robot.data.default_root_state[env_ids]
@@ -695,6 +825,14 @@ class HeterogeneousPushMultiAgent(DirectMARLEnv):
         self.extras["log"] = dict()
         self.extras["log"].update(extras)
         extras = dict()
+<<<<<<< HEAD
+=======
+        # extras["Episode_Termination/base_contact"] = torch.count_nonzero(self.reset_terminated[env_ids]).item()
+        # extras["Episode_Termination/time_out"] = torch.count_nonzero(self.reset_time_outs[env_ids]).item()
+        self.extras["log"].update(extras)
+        # reset idx for anymal #
+
+>>>>>>> main
 
 @torch.jit.script
 def compute_intermediate_values(
