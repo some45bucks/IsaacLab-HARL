@@ -69,20 +69,12 @@ agent:
     directory: "quadcopter_direct"
     experiment_name: ""
     write_interval: auto
-<<<<<<< HEAD
-    checkpoint_interval: 1_000_000
-=======
     checkpoint_interval: auto
->>>>>>> main
 
 
 # Sequential trainer
 # https://skrl.readthedocs.io/en/latest/api/trainers/sequential.html
 trainer:
   class: SequentialTrainer
-<<<<<<< HEAD
-  timesteps: 10_000_000
-=======
   timesteps: 4800
->>>>>>> main
   environment_info: log

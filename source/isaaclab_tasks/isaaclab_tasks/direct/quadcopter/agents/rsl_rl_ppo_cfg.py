@@ -12,11 +12,7 @@ from isaaclab_rl.rsl_rl import RslRlOnPolicyRunnerCfg, RslRlPpoActorCriticCfg, R
 class QuadcopterPPORunnerCfg(RslRlOnPolicyRunnerCfg):
     num_steps_per_env = 24
     max_iterations = 200
-<<<<<<< HEAD
     save_interval = 10_000
-=======
-    save_interval = 50
->>>>>>> main
     experiment_name = "quadcopter_direct"
     empirical_normalization = False
     policy = RslRlPpoActorCriticCfg(

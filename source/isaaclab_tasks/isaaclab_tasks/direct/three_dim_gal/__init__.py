@@ -11,19 +11,23 @@ import gymnasium as gym
 
 from . import agents
 from .three_dim_gal import (
-    ThreeDimGalEnvCfg
+    ThreeDimGalEnvCfg,
+    ThreeDimGalEnv
 )
 
 from .minitank import (
-    MinitankEnvCfg
+    MinitankEnvCfg,
+    MinitankEnv
 )
 
 from .three_dim_gal_cameras import (
-    ThreeDimGalCamerasEnvCfg
+    ThreeDimGalCamerasEnvCfg,
+    ThreeDimGalCamerasEnv
 )
 
 from .minitank_adversarial import (
-    MinitankAdversarialEnvCfg
+    MinitankAdversarialEnvCfg,
+    MinitankAdversarialEnv
 )
 ##
 # Register Gym environments.
@@ -31,7 +35,7 @@ from .minitank_adversarial import (
 
 gym.register(
     id="3dg-Direct-v0",
-    entry_point="isaaclab_tasks.direct.three_dim_gal.three_dim_gal:three_dim_galEnv",
+    entry_point=ThreeDimGalEnv,
     disable_env_checker=True,
     kwargs={
         "env_cfg_entry_point": ThreeDimGalEnvCfg,
@@ -46,7 +50,7 @@ gym.register(
 
 gym.register(
     id="Minitank-Direct-v0",
-    entry_point="isaaclab_tasks.direct.three_dim_gal.minitank:MinitankEnv",
+    entry_point=MinitankEnv,
     disable_env_checker=True,
     kwargs={
         "env_cfg_entry_point": MinitankEnvCfg,
@@ -57,7 +61,7 @@ gym.register(
 
 gym.register(
     id="Minitank-Adversarial-Direct-v0",
-    entry_point="isaaclab_tasks.direct.three_dim_gal.minitank_adversarial:MinitankAdversarialEnv",
+    entry_point=MinitankAdversarialEnv,
     disable_env_checker=True,
     kwargs={
         "env_cfg_entry_point": MinitankAdversarialEnvCfg,
@@ -69,7 +73,7 @@ gym.register(
 
 gym.register(
     id="Minitank-Adversarial-Cameras-Direct-v0",
-    entry_point="isaaclab_tasks.direct.three_dim_gal.three_dim_gal_cameras:ThreeDimGalCamerasEnv",
+    entry_point=ThreeDimGalCamerasEnv,
     disable_env_checker=True,
     kwargs={
         "env_cfg_entry_point": ThreeDimGalCamerasEnvCfg,

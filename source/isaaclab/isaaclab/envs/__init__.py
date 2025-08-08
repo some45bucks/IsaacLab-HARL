@@ -44,10 +44,7 @@ For more information about the workflow design patterns, see the `Task Design Wo
 
 from . import mdp, ui
 from .common import VecEnvObs, VecEnvStepReturn, ViewerCfg
-<<<<<<< HEAD
 from .direct_marl_adv_env import DirectMARLAdvEnv
-=======
->>>>>>> main
 from .direct_marl_env import DirectMARLEnv
 from .direct_marl_env_cfg import DirectMARLEnvCfg
 from .direct_rl_env import DirectRLEnv

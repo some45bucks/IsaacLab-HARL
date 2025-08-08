@@ -11,10 +11,12 @@ from isaaclab.assets import ArticulationCfg
 from isaaclab.utils.assets import ISAACLAB_NUCLEUS_DIR
 from isaaclab.actuators import DCMotorCfg
 
+sim_path = sim_utils.__path__[0]
+SOURCE_PATH = sim_path[:sim_path.index('source')] + 'source'
 
 MINITANK_CFG = ArticulationCfg(
     spawn=sim_utils.UsdFileCfg(
-        usd_path=os.path.abspath("./source/isaaclab_tasks/isaaclab_tasks/direct/three_dim_gal/minitank.usda"),
+        usd_path=f"{SOURCE_PATH}/isaaclab_tasks/isaaclab_tasks/direct/three_dim_gal/minitank.usda",
         visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(0.0, 1.0, 0.0))
     ),
     init_state=ArticulationCfg.InitialStateCfg(

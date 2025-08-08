@@ -30,11 +30,8 @@ train:
   use_proper_time_limits: True
   # if set, load models from this directory; otherwise, randomly initialise the models
   model_dir: #
-<<<<<<< HEAD
   # if set, saves the whole model with the class instead of just the state_dict
   save_entire_model: True
-=======
->>>>>>> main
 eval:
   # whether to use evaluation
   use_eval: True

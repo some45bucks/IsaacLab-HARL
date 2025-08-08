@@ -11,11 +11,7 @@ device:
   cuda_deterministic: True
   # arg to torch.set_num_threads
   torch_threads: 4
-<<<<<<< HEAD
-  # specify the device to use
-=======
   # if you have multiple GPUs, you can specify which GPU to use
->>>>>>> main
   gpu_id: 0
 train:
   # number of parallel environments for training data collection
@@ -36,11 +32,8 @@ train:
   use_proper_time_limits: True
   # if set, load models from this directory; otherwise, randomly initialise the models
   model_dir: #
-<<<<<<< HEAD
   # whether or not to save the entire model, or just the state dict
   save_entire_model: True
-=======
->>>>>>> main
 eval:
   # whether to use evaluation
   use_eval: True

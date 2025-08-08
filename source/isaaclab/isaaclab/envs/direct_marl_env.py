@@ -320,7 +320,6 @@ class DirectMARLEnv(gym.Env):
 
         # update observations and the list of current agents (sorted as in possible_agents)
         self.obs_dict = self._get_observations()
-<<<<<<< HEAD
 
         if hasattr(self.cfg, "teams"):
             # if teams are defined, we need to update the agents list to be per team
@@ -331,9 +330,6 @@ class DirectMARLEnv(gym.Env):
                         self.agents.append(agent)
         else:
             self.agents = [agent for agent in self.possible_agents if agent in self.obs_dict]
-=======
-        self.agents = [agent for agent in self.possible_agents if agent in self.obs_dict]
->>>>>>> main
 
         # return observations
         return self.obs_dict, self.extras
@@ -400,12 +396,8 @@ class DirectMARLEnv(gym.Env):
         self.common_step_counter += 1  # total step (common for all envs)
 
         self.terminated_dict, self.time_out_dict = self._get_dones()
-<<<<<<< HEAD
         self.reset_buf[:] = torch.logical_or(torch.stack(list(self.terminated_dict.values())), \
                                              torch.stack(list(self.time_out_dict.values()))).any(dim=0)
-=======
-        self.reset_buf[:] = math.prod(self.terminated_dict.values()) | math.prod(self.time_out_dict.values())
->>>>>>> main
         self.reward_dict = self._get_rewards()
 
         # -- reset envs that terminated/timed-out and log the episode information
@@ -420,7 +412,6 @@ class DirectMARLEnv(gym.Env):
 
         # update observations and the list of current agents (sorted as in possible_agents)
         self.obs_dict = self._get_observations()
-<<<<<<< HEAD
         if hasattr(self.cfg, "teams"):
             # if teams are defined, we need to update the agents list to be per team
             self.agents = []
@@ -434,12 +425,6 @@ class DirectMARLEnv(gym.Env):
         # add observation noise
         # note: we apply no noise to the state space (since it is used for centralized training or critic networks)
         # TODO: Update this to allow for adversarial training as well
-=======
-        self.agents = [agent for agent in self.possible_agents if agent in self.obs_dict]
-
-        # add observation noise
-        # note: we apply no noise to the state space (since it is used for centralized training or critic networks)
->>>>>>> main
         if self.cfg.observation_noise_model:
             for agent, obs in self.obs_dict.items():
                 if agent in self._observation_noise_model:

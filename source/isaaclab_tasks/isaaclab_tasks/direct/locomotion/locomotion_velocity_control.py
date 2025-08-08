@@ -16,14 +16,11 @@ from isaaclab.envs import DirectMARLEnv, DirectMARLEnvCfg
 from isaaclab.utils.math import quat_from_angle_axis
 from isaaclab.markers import VisualizationMarkers, VisualizationMarkersCfg
 from isaaclab.utils.assets import ISAAC_NUCLEUS_DIR
-<<<<<<< HEAD
 from isaaclab.sensors import ContactSensor, ContactSensorCfg
 from isaaclab.utils.math import quat_rotate_inverse, yaw_quat
 from . import rewards_funcs as rewards
 
 from pathlib import Path
-=======
->>>>>>> main
 
 def normalize_angle(x):
     return torch.atan2(torch.sin(x), torch.cos(x))
@@ -70,12 +67,9 @@ class LocomotionVelocityEnv(DirectMARLEnv):
             for agent, action_space in self.cfg.action_spaces.items()
         }
 
-<<<<<<< HEAD
         # Initialize the gait phase observation
         self.gait_phase_obs = self.gait_phase(self.cfg.period)
 
-=======
->>>>>>> main
         self.action_scale = self.cfg.action_scale
         self.joint_gears = torch.tensor(self.cfg.joint_gears, dtype=torch.float32, device=self.sim.device)
         self.motor_effort_ratio = torch.ones_like(self.joint_gears, device=self.sim.device)
@@ -85,7 +79,6 @@ class LocomotionVelocityEnv(DirectMARLEnv):
         self.prev_potentials = torch.zeros_like(self.potentials)
         # X/Y linear velocity and yaw angular velocity commands
         self._commands = torch.zeros(self.num_envs, 3, device=self.device)
-<<<<<<< HEAD
         
         #TODO need to add those two lines for the device and to make the model purely inference
         walking_policy_path = str(
@@ -93,8 +86,6 @@ class LocomotionVelocityEnv(DirectMARLEnv):
         )
         self.walking_model = torch.load(walking_policy_path, map_location=self.device)
         self.walking_model.eval() #Sets the model to evaluation mode, solely for inference
-=======
->>>>>>> main
 
         self.start_rotation = torch.tensor([1, 0, 0, 0], device=self.sim.device, dtype=torch.float32)
         self.up_vec = torch.tensor([0, 0, 1], dtype=torch.float32, device=self.sim.device).repeat((self.num_envs, 1))
@@ -104,7 +95,6 @@ class LocomotionVelocityEnv(DirectMARLEnv):
 
         self._episode_sums = {
             "total_reward": torch.zeros(self.num_envs, dtype=torch.float32, device=self.device),
-<<<<<<< HEAD
             "gait_reward": torch.zeros(self.num_envs, dtype=torch.float32, device=self.device),
             "slide_reward": torch.zeros(self.num_envs, dtype=torch.float32, device=self.device),
             "other_rewards": torch.zeros(self.num_envs, dtype=torch.float32, device=self.device),
@@ -112,10 +102,6 @@ class LocomotionVelocityEnv(DirectMARLEnv):
 
         self.feet_ids, self.feet_names = self.contact_sensors[f"robot_0"].find_bodies(".*_ankle_link")
 
-=======
-        }
-
->>>>>>> main
     def _draw_markers(self, command):
         xy_commands = command.clone()
         z_commands = xy_commands[:, 2].clone()
@@ -167,13 +153,8 @@ class LocomotionVelocityEnv(DirectMARLEnv):
         marker_locations = torch.concat(
             [
                 robot_pos,
-<<<<<<< HEAD
                 robot_pos + xy_commands * 10,
                 robot_pos + self.robots["robot_0"].data.root_com_lin_vel_b * 10,
-=======
-                robot_pos + xy_commands,
-                robot_pos + self.robots["robot_0"].data.root_com_lin_vel_b,
->>>>>>> main
                 robot_pos + offset1,
                 robot_pos + offset2,
             ],
@@ -199,22 +180,16 @@ class LocomotionVelocityEnv(DirectMARLEnv):
         light_cfg = sim_utils.DomeLightCfg(intensity=2000.0, color=(0.75, 0.75, 0.75))
         light_cfg.func("/World/Light", light_cfg)
 
-<<<<<<< HEAD
         # contact sensors        
         self.contact_sensors = {}
         self.contact_sensors["robot_0"] = ContactSensor(self.cfg.__dict__["contact_sensor_0"])
 
-=======
->>>>>>> main
     def _pre_physics_step(self, actions: torch.Tensor):
         self.prev_actions["robot_0"] = self.actions["robot_0"].clone()
         self.actions["robot_0"] = actions["robot_0"].clone()
 
     def _apply_action(self):
-<<<<<<< HEAD
         self.contact_sensors["robot_0"].update(self.step_dt)
-=======
->>>>>>> main
         forces = self.action_scale * self.joint_gears * self.actions["robot_0"]
         self.robots["robot_0"].set_joint_effort_target(forces, joint_ids=self._joint_dof_idx)
 
@@ -222,13 +197,8 @@ class LocomotionVelocityEnv(DirectMARLEnv):
         self.torso_position, self.torso_rotation = self.robots["robot_0"].data.root_pos_w, self.robots["robot_0"].data.root_quat_w
         self.velocity, self.ang_velocity = self.robots["robot_0"].data.root_lin_vel_w, self.robots["robot_0"].data.root_ang_vel_w
         self.dof_pos, self.dof_vel = self.robots["robot_0"].data.joint_pos, self.robots["robot_0"].data.joint_vel
-<<<<<<< HEAD
         self.dof_pos_scaled = torch_utils.maths.unscale(self.dof_pos, 
                                                         self.robots["robot_0"].data.soft_joint_pos_limits[0, :, 0], 
-=======
-        self.dof_pos_scaled = torch_utils.maths.unscale(self.dof_pos, \
-                                                        self.robots["robot_0"].data.soft_joint_pos_limits[0, :, 0], \
->>>>>>> main
                                                         self.robots["robot_0"].data.soft_joint_pos_limits[0, :, 1])
 
     def _get_observations(self) -> dict:
@@ -237,17 +207,13 @@ class LocomotionVelocityEnv(DirectMARLEnv):
                 self._commands,
                 self.velocity,
                 self.ang_velocity,
-<<<<<<< HEAD
                 self.gait_phase_obs,
-=======
->>>>>>> main
                 self.actions["robot_0"],
             ),
             dim=-1,
         )
         observations = {"robot_0": obs}
         return observations
-<<<<<<< HEAD
     
     # This functions computes the gait phase of the robot for observations.
     def gait_phase(
@@ -282,13 +248,6 @@ class LocomotionVelocityEnv(DirectMARLEnv):
         )
 
         other_rewards = self.compute_rewards(
-=======
-
-    def _get_rewards(self) -> torch.Tensor:
-        self._draw_markers(self._commands)
-
-        total_reward = compute_rewards(\
->>>>>>> main
             self.robots["robot_0"],
             self._commands,
             self.actions["robot_0"],
@@ -301,7 +260,6 @@ class LocomotionVelocityEnv(DirectMARLEnv):
             self.cfg.actions_cost_scale,
             self.cfg.energy_cost_scale,
             self.cfg.dof_vel_scale,
-<<<<<<< HEAD
             self.motor_effort_ratio,
         )
         # new rewards from rewards_funcs.py get added here
@@ -319,17 +277,6 @@ class LocomotionVelocityEnv(DirectMARLEnv):
         return {"robot_0": total_reward}
 
     def _get_dones(self) -> tuple[dict, dict]:
-=======
-            self.cfg.alive_reward_scale,
-            self.motor_effort_ratio,
-        )
-
-        self._episode_sums["total_reward"] += total_reward
-
-        return {"robot_0": total_reward}
-
-    def _get_dones(self) -> tuple[torch.Tensor, torch.Tensor]:
->>>>>>> main
         self._compute_intermediate_values()
         time_out = self.episode_length_buf >= self.max_episode_length - 1
         died = self.torso_position[:, 2] < self.cfg.termination_height
@@ -350,7 +297,6 @@ class LocomotionVelocityEnv(DirectMARLEnv):
         self.robots["robot_0"].write_root_velocity_to_sim(default_root_state[:, 7:], env_ids)
         self.robots["robot_0"].write_joint_state_to_sim(joint_pos, joint_vel, None, env_ids)
 
-<<<<<<< HEAD
         # p = torch.zeros(1).uniform_(0, 1.0)
         #TODO we are assigning angular and linear velocity at the same time here. Possibly causing an error
         lin_ang_velocity = torch.zeros((len(env_ids), 3)).uniform_(-0.1, 0.1).to(self.device) # type:ignore
@@ -363,17 +309,6 @@ class LocomotionVelocityEnv(DirectMARLEnv):
         #     self._commands[env_ids, 0] = v
         # else:
         #     self._commands[env_ids, 2] = v
-=======
-        p = torch.zeros(1).uniform_(0, 1.0)
-        v = torch.zeros(1).uniform_(-1.0, 1.0)
-
-        self._commands[env_ids] = torch.zeros_like(self._commands[env_ids])
-        
-        if p < 0.5:
-            self._commands[env_ids, 0] = v
-        else:
-            self._commands[env_ids, 2] = v
->>>>>>> main
 
 
         self._compute_intermediate_values()
@@ -387,7 +322,6 @@ class LocomotionVelocityEnv(DirectMARLEnv):
         self.extras["log"].update(extras)
 
 
-<<<<<<< HEAD
     def compute_rewards(
         self,
         robot: Articulation,
@@ -445,60 +379,4 @@ class LocomotionVelocityEnv(DirectMARLEnv):
             # - smoothness_cost_scale * smoothness_penalty
         )
         return total_reward
-=======
-
-# @torch.jit.script
-def compute_rewards(
-    robot: Articulation,
-    commands: torch.Tensor,
-    actions: torch.Tensor,
-    prev_actions: torch.Tensor,
-    dof_vel: torch.Tensor,
-    dof_pos_scaled: torch.Tensor,
-    potentials: torch.Tensor,
-    prev_potentials: torch.Tensor,
-    smoothness_cost_scale: float,
-    actions_cost_scale: float,
-    energy_cost_scale: float,
-    dof_vel_scale: float,
-    alive_reward_scale: float,
-    motor_effort_ratio: torch.Tensor,
-):
-    # Requires storing prev_actions
-    action_delta = actions - prev_actions
-    smoothness_penalty = torch.sum(action_delta ** 2, dim=-1)
-
-    # linear velocity tracking
-    lin_vel_error = torch.sum(torch.square(commands[:, :2] - robot.data.root_lin_vel_b[:, :2]), dim=1)
-    lin_vel_error_mapped = torch.exp(-lin_vel_error / 0.25)
-    # yaw rate tracking
-    yaw_rate_error = torch.square(commands[:, 2] - robot.data.root_ang_vel_b[:, 2])
-    yaw_rate_error_mapped = torch.exp(-yaw_rate_error / 0.25)
-
-    # energy penalty for movement
-    actions_cost = torch.sum(actions**2, dim=-1)
-    electricity_cost = torch.sum(
-        torch.abs(actions * dof_vel * dof_vel_scale) * motor_effort_ratio.unsqueeze(0),
-        dim=-1,
-    )
-
-    # dof at limit cost
-    dof_at_limit_cost = torch.sum(dof_pos_scaled > 0.98, dim=-1)
-
-    # reward for duration of staying alive
-    alive_reward = torch.ones_like(potentials) * alive_reward_scale
-    progress_reward = potentials - prev_potentials
-
-    total_reward = (
-        # progress_reward
-        + lin_vel_error_mapped
-        + yaw_rate_error_mapped
-        + alive_reward
-        # - actions_cost_scale * actions_cost
-        # - energy_cost_scale * electricity_cost
-        # - dof_at_limit_cost
-        # - smoothness_cost_scale * smoothness_penalty
-    )
-    return total_reward
->>>>>>> main
 

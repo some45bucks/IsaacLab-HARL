@@ -1,6 +1,4 @@
-<<<<<<< HEAD
-<!-- ![image](https://github.com/user-attachments/assets/dc883271-761c-4342-9b0b-15c584b33127) -->
-<!-- ![NVIDIA Team](team_plot.svg)-->
+
 <p align="center">
    <img src="team_plot.svg" alt="NVIDIA Team">
 </p>
@@ -13,11 +11,10 @@ wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
 ```
 
 Once the script is installed, follow the prompts until conda is install and then follow the next steps.
-=======
+
 ![image](https://github.com/user-attachments/assets/dc883271-761c-4342-9b0b-15c584b33127)
 
 # Install
->>>>>>> main
 
 Install the conda environment 
 
@@ -40,8 +37,6 @@ pip install isaacsim[all]==4.5.0 --extra-index-url https://pypi.nvidia.com
 pip install isaacsim[extscache]==4.5.0 --extra-index-url https://pypi.nvidia.com
 ```
 
-<<<<<<< HEAD
-=======
 download the 3D assets form here:
 [https://usu.box.com/s/af10jukvqp4gun3xx2cjqbd4vsq840ek](https://usu.box.com/s/af10jukvqp4gun3xx2cjqbd4vsq840ek)
 Place the downloaded files into a new folder named `assets` located in the root directory of the project:
@@ -53,7 +48,6 @@ IsaacLab-HARL/
 ├── README.md
 ├── ...
 ```
->>>>>>> main
 
 # Multi-Agent Training with HARL
 
