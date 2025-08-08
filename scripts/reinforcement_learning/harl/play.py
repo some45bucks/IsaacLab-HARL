@@ -29,10 +29,7 @@ parser.add_argument(
         "maddpg",
         "matd3",
         "mappo",
-<<<<<<< HEAD
         "happo_adv",
-=======
->>>>>>> main
     ],
     help="Algorithm name. Choose from: happo, hatrpo, haa2c, haddpg, hatd3, hasac, had3qn, maddpg, matd3, mappo.",
 )
@@ -41,10 +38,7 @@ parser.add_argument("--task", type=str, default=None, help="Name of the task.")
 parser.add_argument("--seed", type=int, default=None, help="Seed used for the environment")
 parser.add_argument("--num_env_steps", type=int, default=None, help="RL Policy training iterations.")
 parser.add_argument("--dir", type=str, default=None, help="folder with trained models")
-<<<<<<< HEAD
 parser.add_argument("--debug", action="store_true", help="whether to run in debug mode for visualization")
-=======
->>>>>>> main
 
 # append AppLauncher cli args
 AppLauncher.add_app_launcher_args(parser)
@@ -89,11 +83,8 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
     env_args["config"] = env_cfg
     env_args["video_settings"] = {}
     env_args["video_settings"]["video"] = False
-<<<<<<< HEAD
     env_args["headless"] = args["headless"]
     env_args["debug"] = args["debug"]
-=======
->>>>>>> main
 
     # create runner
     runner = RUNNER_REGISTRY[args["algo"]](args, algo_args, env_args)
@@ -122,35 +113,17 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
         dtype=torch.float32,
     )
 
-<<<<<<< HEAD
     while simulation_app.is_running():
         with torch.inference_mode():
             for agent_id, (_, agent_obs) in enumerate(obs.items()):
                 action, _, rnn_state = runner.actor[agent_id].get_actions(
                     agent_obs, rnn_states[:, agent_id, :], masks[:, agent_id, :], None, None
-=======
-    total_rewards = torch.zeros((args["num_envs"], runner.num_agents, 1), dtype=torch.float32, device="cuda:0")
-
-    while simulation_app.is_running():
-        with torch.inference_mode():
-            for agent_id in range(runner.num_agents):
-                action, _, rnn_state = runner.actor[agent_id].get_actions(
-                    obs[:, agent_id, :], rnn_states[:, agent_id, :], masks[:, agent_id, :], None, None
->>>>>>> main
                 )
                 action_space = action.shape[1]
                 actions[:, agent_id, :action_space] = action
                 rnn_states[:, agent_id, :] = rnn_state
 
-<<<<<<< HEAD
             obs, _, _, dones, _, _ = runner.env.step(actions)
-=======
-            obs, _, rewards, dones, _, _ = runner.env.step(actions)
-
-            total_rewards += rewards
-
-            print(f"Average reward: {rewards.mean(axis=0).cpu().numpy()}")
->>>>>>> main
 
             dones_env = torch.all(dones, dim=1)
             masks = torch.ones((args["num_envs"], runner.num_agents, 1), dtype=torch.float32, device="cuda:0")
@@ -160,6 +133,9 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
                 dtype=torch.float32,
                 device="cuda:0",
             )
+
+            if runner.env.unwrapped.sim._number_of_steps >= args["num_env_steps"]:
+                break
 
     runner.env.close()
 
